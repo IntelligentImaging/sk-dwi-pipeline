@@ -16,7 +16,7 @@ All of these tools are installed on the CRL server, along with the reconstructio
 The general workflow is:
   1. Create a template directory: sh dwi-recon-pipeline/dtiTemplate.sh CASEID
   2. Copy all DWI series to CASEID/DICOM
-  3. Convert and prep data: sh dwi-recon-pipeline/convert.sh [CASEID]
+  3. Convert and prep data: sh dwi-recon-pipeline/convert.sh [CASE DIR]
   4. Validate data quality and, if necessary, cut down to 2-4 volumes
   5. Crop an example b0 image for ROI initialization: itksnap volumes/XX_BrainDWI/vol_0000.nii.gz
   6. Create composite B0/B1's: sh dwi-recon-pipeline/createB0B1.sh [B0 Crop] \
