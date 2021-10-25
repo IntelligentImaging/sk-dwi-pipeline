@@ -25,4 +25,4 @@ For the final steps you will require a couple files from the T2 reconstruction.
   9. Review registration attempts and note the best registration to t2_t2 found in t2/
   10. Compute tensor image: sh dwi-recon-pipeline/doSVRandTensorCompute.sh [b0b1/dwi_b0_SUBJID.nii.gz] [SERVER] [BEST ALIGNMENT SUFFIX]
   11. refine t2/atlas_mask_CASEID_1pt2.nii.gz, save as t2/atlas_mask_CASEID_1pt2_refine.nii.gz
-  12. Mask tensor, generate dwi maps, RGB, etc (TBD)
+  12. Mask tensor, generate dwi maps, RGB, etc: sh dwi-recon-pipeline/tensor_post.sh [CASE DIR]
