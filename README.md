@@ -5,9 +5,11 @@ This is a set of scripts used to process diffusion fetal images at the CRL.
 Dependencies
 CRKIT
 dcm2niix
+python3 (and nibabel)
+gsl
+cuda8.0
 fsl (for fslsplit)
 TVtool (for generating RGB)
-python
 
 All of these tools are installed on the CRL server, along with the reconstruction binaries.
 
@@ -26,3 +28,4 @@ For the final steps you will require a couple files from the T2 reconstruction.
   10. Compute tensor image: sh dwi-recon-pipeline/doSVRandTensorCompute.sh [b0b1/dwi_b0_SUBJID.nii.gz] [SERVER] [BEST ALIGNMENT SUFFIX]
   11. refine t2/atlas_mask_CASEID_1pt2.nii.gz, save as t2/atlas_mask_CASEID_1pt2_refine.nii.gz
   12. Mask tensor, generate dwi maps, RGB, etc: sh dwi-recon-pipeline/tensor_post.sh [CASE DIR]
+  13. Run TrackVis to create a .trk tract file: sh dwi-recon-pipeline/runTrackVis.sh [CASE DIR]
