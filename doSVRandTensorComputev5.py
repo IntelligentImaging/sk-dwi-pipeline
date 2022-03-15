@@ -44,7 +44,6 @@ dtiFolder				= baseFolder + '/dti'
 dwi_to_atlas_tfm		= b0b1folder+'/'+volToUse+'-atlas_'+PID+'_'+regMetric+'.tfm'
 resampledMask			= t2folder+'/'+'atlas_mask_'+PID+'_1pt2.nii.gz'
 dilatedMask             = t2folder+'/'+'atlas_mask_'+PID+'_1pt2_dilated.nii.gz'
-atlasT2                 = t2folder+'/'+'atlas_t2_'+PID+'.nii.gz'
 
 def listFilesWithSearchString(searchString=''):
 	p = sp.Popen('ls '+searchString, stdout=sp.PIPE, shell=True)
@@ -117,8 +116,8 @@ for i in tmpFiles:
 print('Transforming B0/B1 to atlas space in b0b1 folder')
 # sp.call(( skResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
 # sp.call(( skResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
-sp.call(( crlResampler, b0, dwi_to_atlas_tfm, atlasT2, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
-sp.call(( crlResampler, b1, dwi_to_atlas_tfm, atlasT2, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
+sp.call(( crlResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
+sp.call(( crlResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
     
 # tmpFiles = [str(x) for x in Path(dtiFolder).iterdir() if x.is_file() and os.path.split(str(x))[1].endswith('CWLLS1.nrrd')]
 # for i in tmpFiles:
