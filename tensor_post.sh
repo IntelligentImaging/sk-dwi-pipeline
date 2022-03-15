@@ -1,10 +1,11 @@
 #!/bin/bash
 
-if [[ $# -ne 1 ]]; then	
+if [[ $# -lt 1 || $# -gt 2 ]]; then	
 	echo "Incorrect argument supplied!"
-    echo "usage: sh $0 [CASE DIR]"
+    echo "usage: sh $0 [CASE DIR] [[opt: Tensor]]"
 	echo "produces AD, FA, CFA, MD, RD from tensor"
     echo "Uses dti/*CWLLS.nii.gz and t2/atlas_mask*_1pt2_refine.nii.gz"
+    echo "Optional second argument can be used to specify desired tensor"
     echo
 	exit
 	fi
@@ -16,7 +17,10 @@ fi
 DIR=`readlink -f $1`
 
 echo "Searching for tensor and mask"
-TENSOR=`find ${DIR}/dti -maxdepth 1 -type f -name atlas_tensor\*CWLLS1.nii.gz`
+if [[ -f $2 ]] ; then 
+    TENSOR=$2
+else TENSOR=`find ${DIR}/dti -maxdepth 1 -type f -name atlas_tensor\*CWLLS1.nii.gz`
+fi
 TBASE=`basename $TENSOR`
 TTBASE="${TBASE%%.*}"
 MASK=`find ${DIR}/t2 -maxdepth 1 -type f -name atlas_mask\*1pt2_refine.nii.gz` 
@@ -74,15 +78,14 @@ echo $cmd >> $RUN
 echo "Generate scalar parameters"
 $cmd
 
-echo "Generate color FA"
-cmd="TVtool -in ${TENSOR} -out ${CFA} -rgb"
-echo $cmd >> $RUN
-$cmd
-
 if [[ ! -f $MTENSOR ]] ; then
 	echo "Masked tensor NOT created"
 else
 	echo "Masked tensor: $MTENSOR"
+    echo "Generate color FA"
+    cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
+    echo $cmd >> $RUN
+    $cmd
 fi
 if [[ ! -f ${AD} || ! -f ${FA} || ! -f ${MD} || ! -f ${RD} || ! -f ${CFA} ]] ; then
 	echo "Error: Output diffusion parameter(s) missing from ${OUT}"

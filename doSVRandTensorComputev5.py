@@ -29,7 +29,7 @@ print('Dilate factor is ' + dilateFactor)
 ############################
 SVRexecutable           = '/local/dti_svr-master2/bin/regSliceToVolume'
 computeTensorExecutable = '/local/dti_svr-master2/bin/computeTensor'
-skResampler 			= '/home/ch191070/code/MyCodes/skResampler/Build/skResampler'
+# skResampler 			= '/home/ch191070/code/MyCodes/skResampler/Build/skResampler'
 print('SVR executable =  ' + SVRexecutable)
 print('Compute tensor executable = ' + computeTensorExecutable)
 
@@ -44,13 +44,7 @@ dtiFolder				= baseFolder + '/dti'
 dwi_to_atlas_tfm		= b0b1folder+'/'+volToUse+'-atlas_'+PID+'_'+regMetric+'.tfm'
 resampledMask			= t2folder+'/'+'atlas_mask_'+PID+'_1pt2.nii.gz'
 dilatedMask             = t2folder+'/'+'atlas_mask_'+PID+'_1pt2_dilated.nii.gz'
-
-# FOR DELETION
-#t2img                   = t2folder + '/' + 't2_t2_' + PID + '_crop' + '.nii.gz'
-#t2_mask                 = t2folder + '/' + 't2_mask_' + PID + '.nii.gz'
-#t2_mask_undilated       = t2folder + '/' + 't2_mask_' + PID + '_undilated.nii.gz' #(Will be created by this program)
-#if not os.path.isfile( t2img ):
-#		t2img = t2folder + '/' + 't2_t2_' + PID + '.nii'
+atlasT2                 = t2folder+'/'+'atlas_t2_'+PID+'.nii.gz'
 
 def listFilesWithSearchString(searchString=''):
 	p = sp.Popen('ls '+searchString, stdout=sp.PIPE, shell=True)
@@ -121,9 +115,11 @@ for i in tmpFiles:
 
 # Transform B0/B1 images to atlas space
 print('Transforming B0/B1 to atlas space in b0b1 folder')
-sp.call(( skResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
-sp.call(( skResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
-
+# sp.call(( skResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
+# sp.call(( skResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
+sp.call(( crlResampler, b0, dwi_to_atlas_tfm, atlasT2, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
+sp.call(( crlResampler, b1, dwi_to_atlas_tfm, atlasT2, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
+    
 # tmpFiles = [str(x) for x in Path(dtiFolder).iterdir() if x.is_file() and os.path.split(str(x))[1].endswith('CWLLS1.nrrd')]
 # for i in tmpFiles:
 # 	# We will extract reg method and tensor method used from the file name
