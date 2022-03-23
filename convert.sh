@@ -1,10 +1,71 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then	
-	echo "Incorrect argument supplied!"
-	echo "usage: sh $0 [dwi case directory]"
-	exit
-fi
+# DEFAULT DTI STRING LIST ---> #
+STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*DTI_Fetal*' -o -iname '*IVIM_DWI*' -o -iname '*Diffusion*' -o -iname '*FetalDTI*' -o -iname '*BRAINDTI*''
+                
+
+show_help () {
+cat << EOF
+    USAGE: sh ${0##*/} [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
+    Incorrect input supplied
+    
+    Takes DWI series in DICOM/ and converts to 4D (placed in nrrd/) and 3D (placed in volumes/) formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
+    
+    Required argument:
+    [Subject Directory] is the DWI processing directory- it will have folders named DICOM/
+        t2/ b0b1/ nrrd/ volumes/ scripts/
+
+    Optional arguments:
+        -d  Supply the raw data directory to convert. This script will set up symbolic
+            links to the data. 
+        
+        -s  Specify string of DWI folder which will be converted.
+            By default the script will look for DICOM series with the 
+            following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion,
+                FetalDTI, BRAINDTI
+EOF
+}
+
+while :; do
+    case $1 in
+        -h|-\?|--help)
+            show_help # help message
+            exit
+            ;;
+        -d|--dicom)
+            if [[ -d "$2" ]] ; then
+                DDIR=$2 # Specify a DICOM directory to link and convert
+                shift
+            else
+                die 'error: "-d" requires a DICOM directory'
+            fi
+            ;;
+        -s|--string)
+            if [[ -n "$2" ]] ; then
+                STR="${2}" # Specify string to select from DICOM dir
+                let sopt=1
+                shift
+            else
+                die 'error: "-s" requires you to specify a string to search'
+            fi
+            ;;
+        --) # end of optionals
+            shift
+            break
+            ;;
+        -)?*
+            printf 'warning: unknown option (ignored: %s\m' "$1" >&2
+            ;;
+        *) # default case, no optionals
+            break
+    esac
+    shift
+done
+
+if [ $# -ne 1 ]; then
+    show_help
+    exit
+fi 
 
 idpath=`readlink -f $1`
 if [[ ! -d $idpath ]] ; then
@@ -17,9 +78,17 @@ DICOM="${idpath}/DICOM"
 NRRD="${idpath}/nrrd"
 VOLUMES="${idpath}/volumes"
 
-for dcm in ${DICOM}/* ; do
+if [[ ! -d $DICOM ]] ; then ln -s ${DDIR} ${DICOM} ; fi # create a symlink to the raw data
+if [[ ! -n ${DDIR} ]] ; then DDIR=`readlink -f $DICOM` ; fi # grab the path to the raw directory if we don't already have one
+# Generate list of DICOM folders to convert
+if [[ $sopt=1 ]] ; then
+    allDCM=`find ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA' -o -iname '*_FA' -o -iname '*_ADC' -o -iname '*TRACEW' \)`
+else 
+    allDCM=`find ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA' -o -iname '*_FA' -o -iname '*_ADC' -o -iname '*TRACEW' \)`
+fi
+
+for dcm in ${allDCM} ; do
     if [[ -d $dcm ]] ; then
-    
         # INITIAL DCM2NIIX CONVERT, RENAME FILES, GENERATE SLICE TIMING
         echo "Converting $dcm"
         base=`basename $dcm`
