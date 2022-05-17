@@ -21,10 +21,8 @@ REFERENCE=`readlink -f $argREG`
 TRANSFORM=`readlink -f $argTFM`
 BESTORIG=`readlink -f $argSTACK`
 TFMPREFIX="t2-atlas"
-# INCORRECT VERSION OR REORIENT
-# REORIENT="/fileserver/fetal/bin/crlReorientReconstructedImage"
 C3D="/fileserver/fetal/bin/c3d_affine_tool"
-FIXMAT="/home/ch191070/scripts/fetalDTI/changeTFMnameInFileToAffine.py"
+FIXMAT="${FETALDTI}/changeTFMnameInFileToAffine.py"
 NIIDIR=`dirname $BESTORIG`
 DRECON="${NIIDIR}/drecon.nii"
 RRECON="${NIIDIR}/rrecon.nii"
@@ -71,9 +69,9 @@ if [[ -f $RRECON && -f $DRECON && $TFM1 ]] ; then
     crlAnyTransformToAffineTransform $FINALTFM $FINALINV 1
 # What was mask.nii.gz for?
 #    skResampler $BRAINMASK $INV $DRECON nearest mask.nii.gz
-    skResampler $DRECON $FINALTFM $REFERENCE bspline $outATLAST2
-    skResampler $BRAINMASK $TFM2 $outATLAST2 nearest $outATLASmask
-    skResampler $outATLASmask $FINALINV $DRECON nearest $outT2mask
+    crlResampler $DRECON $FINALTFM $REFERENCE bspline $outATLAST2
+    crlResampler $BRAINMASK $TFM2 $outATLAST2 nearest $outATLASmask
+    crlResampler $outATLASmask $FINALINV $DRECON nearest $outT2mask
 else
     echo "Reorient failed ($RRECON, $DRECON, or $TFM1 inaccessbile)"
     exit 1

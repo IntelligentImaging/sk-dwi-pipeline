@@ -21,8 +21,8 @@ from b0b1ReconLib import getBvals, listFilesInDir, resolveDirName, bashExec, fin
 # USER SETTINGS
 ############################
 # REQUIRED
-executable = '/home/ch191070/library/fetalReconstruction-SK_WORKING/source/bin/SVRreconstructionGPU'
-# executable = '/home/ch191070/library/fetalReconstruction-SK/bin_Working_032417/SVRreconstructionGPU'
+# ADD /fileserver/fetal/software/bin to PATH!
+executable = '/fileserver/fetal/software/fetalReconstruction-cva/source/bin/SVRreconstructionGPU'
 outputFileName = 'B0.nii'
 
 # OPTIONAL, set these to an empty string to not use these options, e.g. maskFile=''
@@ -47,10 +47,10 @@ disableBiasCorrection = False
 useAllIdentityTrForReg = False
 b0switch = True
 b1switch = False # OVERRIDES B0 switch
-PSFswitch = True # If T, set 3 args below. If F, below 3 will be ignored
-psfX = '/home/ch191070/scripts/fetalDTI/PSFprofiles/sinc_xy_TruncSinc.txt'
-psfY = '/home/ch191070/scripts/fetalDTI/PSFprofiles/sinc_xy_TruncSinc.txt'
-psfZ = '/home/ch191070/scripts/fetalDTI/PSFprofiles/sinc_xy_TruncSinc.txt'
+PSFswitch = False # If T, set 3 args below. If F, below 3 will be ignored
+psfX = os.environ["FETALDTI"] + '/PSFprofiles/sinc_xy_TruncSinc.txt'
+psfY = os.environ["FETALDTI"] + '/PSFprofiles/sinc_xy_TruncSinc.txt'
+psfZ = os.environ["FETALDTI"] + '/PSFprofiles/sinc_xy_TruncSinc.txt'
 
 ############################
 # ARGUMENT PARSING

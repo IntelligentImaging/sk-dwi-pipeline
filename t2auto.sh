@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then	
+if [[ $# -ne 2 && $# -ne 1 ]]; then	
 	echo "Incorrect argument supplied!"
-	echo "usage: sh $0 [CASE T2 nii DIR] [CASE DIFF DIR]"
+	echo "usage: sh $0 [CASE T2 nii DIR] [opt: CASE DIFF DIR]"
 	echo "runs t2Atlas prep script for DTI processing and copies output to diffusion dir"
 	echo "finds inputs automatically"
 	exit 1
@@ -10,7 +10,7 @@ fi
 
 # Verify script arguments
 NII=`readlink -f $1`
-if [[ ! $NII == *"nii"* ]] ; then
+if [[ ! $NII == *"nii"*  && -d $NII ]] ; then
     NII=`find $NII -type d -name nii`
 fi
 echo "Input T2 recon directory: $NII"
@@ -19,22 +19,26 @@ if [[ ! -d ${NII} ]] ; then
     echo $1
     exit 1
 fi
-DIFF=`readlink -f $2`
-echo "Diffusion processing directory: $DIFF"
-if [[ ! -d $DIFF ]] ; then
-    echo "DTI dir not found, check path"
-    echo $DIFF
-    exit 1
+
+if [[ -n $2 ]] ; then
+    DIFF=`readlink -f $2`
+    echo "Diffusion processing directory: $DIFF"
+    if [[ ! -d $DIFF ]] ; then
+        echo "DTI dir not found, check path"
+        echo $DIFF
+        exit 1
+    fi
+    DIFFt2="${DIFF}/t2"
 fi
-DIFFt2="${DIFF}/t2"
 
 # t2Atlas prep script for processing
-T2sh="/home/ch191070/scripts/fetalDTI/createAtlasT2andMaskFilev4.sh"
+T2sh="${FETALDTI}/createAtlasT2andMaskFilev4.sh"
 T2shlocal="${NII}/`basename $T2sh`"
 
 # Use find to locate T2 files (oriented recon, mask, recon atlas space, transform, and T2 stack used for orientation)
 echo "Finding T2 files..."
-CASEID=`basename $2`
+DIR=`dirname ${NII}`
+CASEID=`basename ${DIR}`
 # Find oriented T2 recon
 rT2=`find ${NII} -maxdepth 1 -iname r3D\*best\*`
 if [[ ! -f $rT2 ]] ; then
@@ -55,7 +59,7 @@ elif [[ ! -f $MASK ]] ; then
     exit 1
 fi
 # Find atlas space T2 recon
-REG=`find ${NII}/registration -maxdepth 1 -iname register\*nii\*`
+REG=`find ${NII}/registration -maxdepth 1 -iname register\*nii\* -o -iname atlas_t2final\*nii\* | head -n1`
 if [[ ! -f $REG ]] ; then
     echo "error: Atlas-registrered recon (register*) not found"
     echo "Check case recon registration folder"
@@ -111,8 +115,12 @@ fi
 
 if [[ -f ${AT} && -f ${ATm} && -f ${TM} && -f ${TMm} && -f ${outTFM} && -f ${REG} ]] ; then
     echo "T2 prep done"
-    cp ${AT} ${ATm} ${TM} ${TMm} ${outTFM} -v ${DIFFt2}/
-    cp ${outFINAL} -v ${DIFFt2}
+    if [[ -n $2 ]] ; then
+        echo "copy to DWI dir"
+        cp ${AT} ${ATm} ${TM} ${TMm} ${outTFM} -v ${DIFFt2}/
+        cp ${outFINAL} -v ${DIFFt2}
+    else echo "DWI dir not supplied"
+    fi
 else echo "Something went wrong- missing outputs"
 fi
 echo

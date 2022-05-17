@@ -16,6 +16,9 @@ All of these tools are installed on the CRL server, along with the reconstructio
 Installation
   1. Download this repository
   2. Add `export FetalDTI=/path/to/repo` to your .bashrc
+  3. Add `export PATH=$PATH:/fileserver/fetal/software/bin` to your .bashrc
+  4. Add `export BOOST_ROOT=/fileserver/fetal/software/boost_1_58_0_sk` to your .bashrc
+  5. Add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/fileserver/fetal/software/boost_1_58_0_sk/stage/lib` to your.bashrc
 
 The general workflow is:
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`

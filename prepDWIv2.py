@@ -10,7 +10,8 @@ volsDir   = dirToProc + '/volumes'
 folders   = [str(x) for x in Path(DICOMdir).iterdir() if x.is_dir()]
 
 DICOMconverterExec = '/home/ch137122/bin/crlDICOMConverter'
-getSliceTimingSH = '/home/ch191070/scripts/fetalDTI/getSliceTimingv2.sh'
+# getSliceTimingSH = '/home/ch191070/scripts/fetalDTI/getSliceTimingv2.sh'
+getSliceTimingSH = os.environ["FETALDTI"] + '/getSliceTimingv2.sh'
 for folder in folders:
 	os.chdir(folder)
 	files = [str(x) for x in Path(folder).iterdir() if x.is_file()]
