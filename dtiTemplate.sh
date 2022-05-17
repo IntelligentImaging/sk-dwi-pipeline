@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ ! -d $FETALDTI ] ; then
     echo '$FETALDTI is not set in your .bashrc or the folder does not exist'
-    echo "add something like: FETALDI=/home/ch162835/DTIfetal-local to your .bashrc"
+    echo "add something like: FETALDTI=/home/ch162835/DTIfetal-local to your .bashrc"
     exit
 fi
 

@@ -82,9 +82,9 @@ if [[ ! -d $DICOM ]] ; then ln -s ${DDIR} ${DICOM} ; fi # create a symlink to th
 if [[ ! -n ${DDIR} ]] ; then DDIR=`readlink -f $DICOM` ; fi # grab the path to the raw directory if we don't already have one
 # Generate list of DICOM folders to convert
 if [[ $sopt=1 ]] ; then
-    allDCM=`find ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA' -o -iname '*_FA' -o -iname '*_ADC' -o -iname '*TRACEW' \)`
+    allDCM=`find ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' \)`
 else 
-    allDCM=`find ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA' -o -iname '*_FA' -o -iname '*_ADC' -o -iname '*TRACEW' \)`
+    allDCM=`find ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' \)`
 fi
 
 for dcm in ${allDCM} ; do

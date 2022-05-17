@@ -27,8 +27,8 @@ print('Dilate factor is ' + dilateFactor)
 ############################
 # Setup and Declaration
 ############################
-SVRexecutable           = '/local/dti_svr-master2/bin/regSliceToVolume'
-computeTensorExecutable = '/local/dti_svr-master2/bin/computeTensor'
+SVRexecutable           = '/fileserver/fetal/software/dti_svr-master/bin/regSliceToVolume'
+computeTensorExecutable = '/fileserver/fetal/software/dti_svr-master/bin/computeTensor'
 # skResampler 			= '/home/ch191070/code/MyCodes/skResampler/Build/skResampler'
 print('SVR executable =  ' + SVRexecutable)
 print('Compute tensor executable = ' + computeTensorExecutable)
