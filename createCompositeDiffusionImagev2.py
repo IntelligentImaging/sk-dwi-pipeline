@@ -22,7 +22,7 @@ from b0b1ReconLib import getBvals, listFilesInDir, resolveDirName, bashExec, fin
 ############################
 # REQUIRED
 # ADD /fileserver/fetal/software/bin to PATH!
-executable = 'SVRreconstructionGPU'
+executable = '/fileserver/fetal/software/fetalReconstruction-cva/source/bin/SVRreconstructionGPU'
 outputFileName = 'B0.nii'
 
 # OPTIONAL, set these to an empty string to not use these options, e.g. maskFile=''
