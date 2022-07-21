@@ -27,9 +27,9 @@ print('Dilate factor is ' + dilateFactor)
 ############################
 # Setup and Declaration
 ############################
-SVRexecutable           = '/fileserver/fetal/software/dti_svr-master/bin/regSliceToVolume'
-computeTensorExecutable = '/fileserver/fetal/software/dti_svr-master/bin/computeTensor'
-# skResampler 			= '/home/ch191070/code/MyCodes/skResampler/Build/skResampler'
+SVRexecutable           = '/fileserver/fetal/software/bin/regSliceToVolume'
+computeTensorExecutable = '/fileserver/fetal/software/bin/computeTensor'
+resampler 		        = 'crlResampler' # Located in crkit
 print('SVR executable =  ' + SVRexecutable)
 print('Compute tensor executable = ' + computeTensorExecutable)
 
@@ -114,10 +114,8 @@ for i in tmpFiles:
 
 # Transform B0/B1 images to atlas space
 print('Transforming B0/B1 to atlas space in b0b1 folder')
-# sp.call(( skResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
-# sp.call(( skResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
-sp.call(( crlResampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
-sp.call(( crlResampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
+sp.call(( resampler, b0, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b0_'+PID+'.nii.gz' ))
+sp.call(( resampler, b1, dwi_to_atlas_tfm, resampledMask, 'bspline', b0b1folder+'/'+'atlas_b1_'+PID+'.nii.gz' ))
     
 # tmpFiles = [str(x) for x in Path(dtiFolder).iterdir() if x.is_file() and os.path.split(str(x))[1].endswith('CWLLS1.nrrd')]
 # for i in tmpFiles:
