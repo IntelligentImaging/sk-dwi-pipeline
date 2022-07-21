@@ -54,7 +54,7 @@ if [[ $NMASKS -gt 1 ]] ; then
     echo "Check case recon registration folder"
     exit 1
 elif [[ ! -f $MASK ]] ; then
-    echo "error: T2 recon mask (mask_r3Drecon*) not found"
+    echo "error: T2 recon mask (mask_ID_registration*) not found"
     echo "Check case recon registration folder"
     exit 1
 fi
@@ -66,7 +66,7 @@ if [[ ! -f $REG ]] ; then
     exit 1
 fi
 # Find transform from T2 recon to atlas
-TFM=`find ${NII}/registration -maxdepth 1 -iname \*nx\*txt -o -iname \*nx\*mat -o -iname \*nx\*tfm -o -iname tfm\*nx\*txt -o -iname \*r3D\*mat`
+TFM=`find ${NII}/registration -maxdepth 1 -iname \*nx\*txt -o -iname \*nx\*mat -o -iname \*nx\*tfm -o -iname tfm\*nx\*txt -o -iname \*r3D\*mat -o -iname tfm_\*.txt`
 NTFMS=`echo $TFM | wc -w`
 if [[ $NTFMS -gt 1 ]] ; then
 	echo "error: More then one transform found"
