@@ -109,29 +109,33 @@ for dcm in ${allDCM} ; do
         echo "bvecs = $bvecs"       
         echo
         
-        # |v| SLICE TIMING |v|
-        echo "Generate slice timing"
-        json=`find ${out4D} -type f -name \*json | head -n1`
         sliceT="${out4D}/sliceTiming.txt"
+        # |v| SLICE TIMING |v|
+        # echo "Generate slice timing"
+        # # json=`find ${out4D} -type f -name \*json | head -n1`
         # image="${out4D}/${base}.nii.gz"
         # Find starting location of timing info
-        tim=`grep Timing $json -n | cut -d':' -f1`
-        # Add one to go to the next line
-        let lbeg=$tim+1
-        echo SliceTimings begin on line $lbeg of the json
+        # tim=`grep Timing $json -n | cut -d':' -f1`
+        # # Add one to go to the next line
+        # let lbeg=$tim+1
+        # echo SliceTimings begin on line $lbeg of the json
         # Count number of slices
-        z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
-        # Number of times we will need to advance to next line
-        let slices=$z-1
-        # Get last line of Timings
-        lend=`echo ${lbeg} + ${slices} | bc`
-        echo Timings go from line $lbeg to $lend
+        # z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+        # # Number of times we will need to advance to next line
+        # let slices=$z-1
+        # # Get last line of Timings
+        # lend=`echo ${lbeg} + ${slices} | bc`
+        # echo Timings go from line $lbeg to $lend
         # Extract lines
-        sing=`sed -ne "${lbeg},${lend}p" < $json`
-        final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
-        echo "Slice timings:"
-        echo $final
-        echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
+        # sing=`sed -ne "${lbeg},${lend}p" < $json`
+        # final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
+        # echo "Slice timings:"
+        # echo $final
+        # echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
+
+        # ALTERNATE (better) DCMDUMP METHOD #
+        ex=`find $dcm -type f | head -n1`
+        dcmdump +L +P "0019,1029" $ex >> $sliceT
         echo "Slice timing file: $sliceT"
         echo
 
