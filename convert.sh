@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEFAULT DTI STRING LIST ---> #
-STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*DTI_Fetal*' -o -iname '*IVIM_DWI*' -o -iname '*Diffusion*' -o -iname '*FetalDTI*' -o -iname '*BRAINDTI*''
+STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*DTI_Fetal*' -o -iname '*IVIM_DWI*' -o -iname '*Diffusion*' -o -iname '*FetalDTI*' -o -iname '*BRAINDTI*' -o -iname '*SMS2_DTI*''
                 
 
 show_help () {
@@ -22,7 +22,8 @@ cat << EOF
         -s  Specify string of DWI folder which will be converted.
             By default the script will look for DICOM series with the 
             following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion,
-                FetalDTI, BRAINDTI
+                FetalDTI, BRAINDTI, SMS2_DTI
+            The default list can be edited at the top of the script
 EOF
 }
 
