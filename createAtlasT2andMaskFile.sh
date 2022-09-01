@@ -106,7 +106,8 @@ else
 fi
 
 echo "Create inverse transform"
-TFMINV="${TFMITK%%.*}_inv.tfm"
+TFMBASE=`basename $TFMITK`
+TFMINV="${NIIDIR}/${TFMBASE%%.*}_inv.tfm"
 crlAnyTransformToAffineTransform $TFMITK $TFMINV 1 # Invert transform
 echo "Resample uncropped recon to atlas space"
 crlResampler $T2T2 $TFMITK $ATLAST2 bspline $outATLAST2 # Resample original recon; results in atlas-space recon with surrounding CSF/tissues
@@ -117,5 +118,5 @@ echo "Copy files for naming convention needed in DWI pipeline"
 cp $T2T2 -v $outT2T2
 cp $T2mask -v $outT2mask
 cp $TFMITK -v $outTFM
-
+cp $ATLAST2 -v ${NIIDIR}/${base} # This is the CROPPED/masked atlas-space T2 recon
 # copy t2-atlas_CASEID.tfm, atlas*.nii.gz, and t2*.nii.gz to DWI folder for processing (5 files in total)
