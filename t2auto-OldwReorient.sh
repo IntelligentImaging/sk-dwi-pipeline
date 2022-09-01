@@ -1,64 +1,14 @@
 #!/bin/bash
 
-show_help () {
-cat << EOF
-    USAGE: sh ${0##*/} [-d CASE DIFF DIR] [-id SUBJ ID] -- [input T2 NII dir]
-    Incorrect input supplied
-
-    Optional arguments:
-        -d      Points to a diffusion processing directory to which the output
-                files will be copied
-
-        -id     Sets the subject ID. By default the script will try to figure
-                out the ID from the directory path
-EOF
-}
-
-die() {
-    printf '%s\n' "$1" >&2
-    exit 1
-}
-
-while :; do
-    case $1 in
-        -h|-\?|--help)
-            show_help # help message
-            exit
-            ;;
-        -d|--dwi)
-            if [[ -d "$2" ]] ; then
-                DIFF=$2 # Specify
-                shift
-            else
-                die 'error: Supplied DWI dir not found'
-            fi
-            ;;
-        -id)
-            if [[ -n "$2" ]] ; then
-                CASEID="${2}" # Specify
-                shift
-            else
-                die 'error: Subject ID not specified after -id'
-            fi
-            ;;
-        --) # end of optionals
-            shift
-            break
-            ;;
-        -)?*
-            printf 'warning: unknown option (ignored: %s\m' "$1" >&2
-            ;;
-        *) # default case, no optionals
-            break
-    esac
-    shift
-done
+if [[ $# -ne 2 && $# -ne 1 ]]; then	
+	echo "Incorrect argument supplied!"
+	echo "usage: sh $0 [CASE T2 nii DIR] [opt: CASE DIFF DIR]"
+	echo "runs t2Atlas prep script for DTI processing and copies output to diffusion dir"
+	echo "finds inputs automatically"
+	exit 1
+fi
 
 # Verify script arguments
-if [[ $# -ne $1 ]] ; then
-    show_help
-    die
-fi
 NII=`readlink -f $1`
 if [[ ! $NII == *"nii"*  && -d $NII ]] ; then
     NII=`find $NII -type d -name nii`
@@ -70,37 +20,49 @@ if [[ ! -d ${NII} ]] ; then
     exit 1
 fi
 
-DIFFt2="${DIFF}/t2"
+if [[ -n $2 ]] ; then
+    DIFF=`readlink -f $2`
+    echo "Diffusion processing directory: $DIFF"
+    if [[ ! -d $DIFF ]] ; then
+        echo "DTI dir not found, check path"
+        echo $DIFF
+        exit 1
+    fi
+    DIFFt2="${DIFF}/t2"
+fi
+
 # t2Atlas prep script for processing
-T2sh="${FETALDTI}/createAtlasT2andMaskFile.sh"
+T2sh="${FETALDTI}/createAtlasT2andMaskFilev4.sh"
+T2shlocal="${NII}/`basename $T2sh`"
 
 # Use find to locate T2 files (oriented recon, mask, recon atlas space, transform, and T2 stack used for orientation)
 echo "Finding T2 files..."
 DIR=`dirname ${NII}`
-if [[ ! -n $CASEID ]] ; then CASEID=`basename ${DIR}` ; fi
-RDIR="${NII}/registration"
+CASEID=`basename ${DIR}`
 # Find oriented T2 recon
-T2=`find ${RDIR} -maxdepth 1 -iname nxb\*z`
-if [[ ! -f $T2 ]] ; then
-    echo "error: T2 recon (registration/nxb*z) not found"
+rT2=`find ${NII} -maxdepth 1 -iname r3D\*best\*`
+if [[ ! -f $rT2 ]] ; then
+    echo "error: T2 recon (r3DreconOfetus_best*) not found"
+    echo "Check case recon folder"
     exit 1
 fi
 # Find oriented T2 recon mask
-MASK=`find ${RDIR} -maxdepth 1 -name mask_\*_registration\*`
+MASK=`find ${NII}/registration -maxdepth 1 -name mask_\*_registration\*`
 NMASKS=`echo $MASK | wc -w`
 if [[ $NMASKS -gt 1 ]] ; then
     echo "error: More than one mask found"
-    echo "Check t2 registration folder"
+    echo "Check case recon registration folder"
     exit 1
 elif [[ ! -f $MASK ]] ; then
     echo "error: T2 recon mask (mask_ID_registration*) not found"
-    echo "Check t2 registration folder"
+    echo "Check case recon registration folder"
     exit 1
 fi
 # Find atlas space T2 recon
-REG=`find ${RDIR} -maxdepth 1 -iname register\*nii\* -o -iname atlas_t2final\*nii\* | head -n1`
+REG=`find ${NII}/registration -maxdepth 1 -iname register\*nii\* -o -iname atlas_t2final\*nii\* | head -n1`
 if [[ ! -f $REG ]] ; then
-    echo "error: Atlas-registrered recon (registration/atlas_t2final* or register*) not found"
+    echo "error: Atlas-registrered recon (register*) not found"
+    echo "Check case recon registration folder"
     exit 1
 fi
 # Find transform from T2 recon to atlas
@@ -115,18 +77,27 @@ elif [[ ! -f $TFM ]] ; then
     echo "check case recon registration folder"
     exit 1
 fi
+# Find T2 stack reference used for orientation (for making r3DreconOfetus_best*)
+STACK=`echo $rT2 | sed 's,r3DreconO,,g' | sed 's,_best,,g'`
+if [[ ! -f $STACK ]] ; then
+    echo "error: Reference T2 stack (fetus_xx.nii.gz) not found"
+    echo "Check case recon folder"
+    exit 1
+fi
 
 # Process T2 files
 echo "=== All files found for CaseID $CASEID ==="
-echo "T2 recon: $T2"
+echo "T2 recon: $rT2"
 echo "T2 mask: $MASK"
 echo "T2 final recon atlas space: $REG"
 echo "Transform (T2->Atlas): $TFM"
+echo "Reference T2 stack: $STACK"
 
 # "Run" script
 SCRIPT="${NII}/run-createT2Atlas.sh"
 # Copy process script to case dir and run command
-cmd="sh $T2sh $T2 $MASK $REG $TFM"
+cp $T2sh -v $T2shlocal
+cmd="sh $T2shlocal $MASK $REG $TFM $CASEID $STACK"
 echo $cmd > $SCRIPT
 $cmd
 # Check output and copy to diffusion dir
@@ -144,7 +115,7 @@ fi
 
 if [[ -f ${AT} && -f ${ATm} && -f ${TM} && -f ${TMm} && -f ${outTFM} && -f ${REG} ]] ; then
     echo "T2 prep done"
-    if [[ -n $DIFF ]] ; then
+    if [[ -n $2 ]] ; then
         echo "copy to DWI dir"
         cp ${AT} ${ATm} ${TM} ${TMm} ${outTFM} -v ${DIFFt2}/
         cp ${outFINAL} -v ${DIFFt2}

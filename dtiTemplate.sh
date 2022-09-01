@@ -9,7 +9,7 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 	echo "Incorrect argument supplied!"
     echo "usage: sh $0 [CASEID] [DICOMs (optional)]"
 	echo "Run in study folder"
-    echo "Optional argument DICOMs will set up a symbolic link to the raw data which will be converted by pipeline scripts"
+    echo "Optional argument DICOMs will set up a symbolic link to the raw data which will be converted by pipeline scripts (DO NOT USE WITH WASHU DATA)"
 	exit
 	fi
 
@@ -26,8 +26,8 @@ cp $FETALDTI/processSlicerTFMv2.py -uvp ${ID}/scripts/
 cp $FETALDTI/doSVRandTensorComputev5.py -uvp ${ID}/scripts/
 cp $FETALDTI/b0b1ReconLib.py -uvp ${ID}/scripts/
 
-echo "Setting up symbolic link to raw DICOM dir"
 if [[ -n $2 ]] ; then
+echo "Setting up symbolic link to raw DICOM dir"
     if [[ ! -d $2 ]] ; then
         echo "DICOM directory does not exist; check path"
         exit

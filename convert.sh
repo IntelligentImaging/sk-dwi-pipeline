@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # DEFAULT DTI STRING LIST ---> #
-STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*DTI_Fetal*' -o -iname '*IVIM_DWI*' -o -iname '*Diffusion*' -o -iname '*FetalDTI*' -o -iname '*BRAINDTI*' -o -iname '*SMS2_DTI*''
+STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*BRAIN-DTI*' -o -iname '*DTI_Fetal*' -o -iname '*IVIM_DWI*' -o -iname '*Diffusion*' -o -iname '*FetalDTI*' -o -iname '*BRAINDTI*' -o -iname '*SMS2_DTI*''
                 
 
 show_help () {
@@ -35,7 +35,7 @@ while :; do
             ;;
         -d|--dicom)
             if [[ -d "$2" ]] ; then
-                DDIR=$2 # Specify a DICOM directory to link and convert
+                DDIR=`readlink -f $2` # Specify a DICOM directory to link and convert
                 shift
             else
                 die 'error: "-d" requires a DICOM directory'
@@ -79,13 +79,22 @@ DICOM="${idpath}/DICOM"
 NRRD="${idpath}/nrrd"
 VOLUMES="${idpath}/volumes"
 
-if [[ ! -d $DICOM ]] ; then ln -s ${DDIR} ${DICOM} ; fi # create a symlink to the raw data
-if [[ ! -n ${DDIR} ]] ; then DDIR=`readlink -f $DICOM` ; fi # grab the path to the raw directory if we don't already have one
+if [[ -n ${DDIR} ]] ; then
+    check=`find ${DICOM} -mindepth 1 2>/dev/null`
+    if [[ -n $check ]] ; then
+        echo "DICOM dir already has files, do you need to clear it first?"
+        exit 1
+    fi
+    echo "Create symlink to raw DICOMs"
+    ln -s ${DDIR} ${DICOM}
+else DDIR=$DICOM # In the case there is already a DICOM dir with data, this sets the folder
+fi 
+
 # Generate list of DICOM folders to convert
 if [[ $sopt=1 ]] ; then
-    allDCM=`find ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' \)`
+    allDCM=`find -L ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*'  -o -iname '*b0' -o -iname '*TENSOR' \)`
 else 
-    allDCM=`find ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' \)`
+    allDCM=`find -L ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' -o -iname '*b0' -o -iname '*TENSOR'  \)`
 fi
 
 for dcm in ${allDCM} ; do
@@ -110,33 +119,39 @@ for dcm in ${allDCM} ; do
         echo "bvecs = $bvecs"       
         echo
         
-        sliceT="${out4D}/sliceTiming.txt"
         # |v| SLICE TIMING |v|
-        # echo "Generate slice timing"
-        # # json=`find ${out4D} -type f -name \*json | head -n1`
-        # image="${out4D}/${base}.nii.gz"
-        # Find starting location of timing info
-        # tim=`grep Timing $json -n | cut -d':' -f1`
-        # # Add one to go to the next line
-        # let lbeg=$tim+1
-        # echo SliceTimings begin on line $lbeg of the json
-        # Count number of slices
-        # z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
-        # # Number of times we will need to advance to next line
-        # let slices=$z-1
-        # # Get last line of Timings
-        # lend=`echo ${lbeg} + ${slices} | bc`
-        # echo Timings go from line $lbeg to $lend
-        # Extract lines
-        # sing=`sed -ne "${lbeg},${lend}p" < $json`
-        # final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
-        # echo "Slice timings:"
-        # echo $final
-        # echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
-
-        # ALTERNATE (better) DCMDUMP METHOD #
+        sliceT="${out4D}/sliceTiming.txt"
+        # DCMDUMP METHOD FOR GETTING SLICE TIMINGS #
         ex=`find $dcm -type f | head -n1`
-        dcmdump +L +P "0019,1029" $ex >> $sliceT
+        tagcheck=`dcmdump +L +P "0019,1029" $ex`
+        if [[ -n $tagcheck ]] ; then
+            echo "Found slice timings DICOM tag [0019,1029]"
+            dcmdump +L +P "0019,1029" $ex > $sliceT
+        # IF THAT DIDN'T WORK, WE LOOK AT THE JSON INSTEAD
+        else 
+            echo "Generate slice timing"
+            json=`find ${out4D} -type f -name \*json | head -n1`
+            image="${out4D}/${base}.nii.gz"
+            # Find starting location of timing info
+            tim=`grep Timing $json -n | cut -d':' -f1`
+            # Add one to go to the next line
+            let lbeg=$tim+1
+            echo SliceTimings begin on line $lbeg of the json
+            # Count number of slices
+            z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+            # Number of times we will need to advance to next line
+            let slices=$z-1
+            # Get last line of Timings
+            lend=`echo ${lbeg} + ${slices} | bc`
+            echo Timings go from line $lbeg to $lend
+            # Extract lines
+            sing=`sed -ne "${lbeg},${lend}p" < $json`
+            final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
+            echo "Slice timings:"
+            echo $final
+            echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
+        fi 
+        # By hook or by crook, we should have the slice timings now
         echo "Slice timing file: $sliceT"
         echo
 
