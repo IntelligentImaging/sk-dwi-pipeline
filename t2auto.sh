@@ -55,7 +55,7 @@ while :; do
 done
 
 # Verify script arguments
-if [[ $# -ne $1 ]] ; then
+if [[ $# -ne 1 ]] ; then
     show_help
     die
 fi
@@ -104,13 +104,9 @@ if [[ ! -f $REG ]] ; then
     exit 1
 fi
 # Find transform from T2 recon to atlas
-TFM=`find ${NII}/registration -maxdepth 1 -iname \*nx\*txt -o -iname \*nx\*mat -o -iname \*nx\*tfm -o -iname tfm\*nx\*txt -o -iname \*r3D\*mat -o -iname tfm_\*.txt`
+TFM=`find ${NII}/registration -maxdepth 1 -iname \*nx\*txt -o -iname \*nx\*mat -o -iname \*nx\*tfm -o -iname tfm\*nx\*txt -o -iname \*r3D\*mat -o -iname tfm_\*.txt | head -n1`
 NTFMS=`echo $TFM | wc -w`
-if [[ $NTFMS -gt 1 ]] ; then
-	echo "error: More then one transform found"
-	echo "check case recon registration folder"
-	exit 1
-elif [[ ! -f $TFM ]] ; then
+if [[ ! -f $TFM ]] ; then
     echo "error: Transform not found"
     echo "check case recon registration folder"
     exit 1

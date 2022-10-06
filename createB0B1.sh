@@ -25,14 +25,20 @@ rm -rfv ${VOLDIR}/tmp*
 rm -vf volumes/${B0} volumes/${TENSOR} volumes/${B1} b0b1/${B0} b0b1/${TENSOR} b0b1/${B1}
 
 # select available python3 version
-if python3.5 -V | grep -q "Python 3.5" ; then
-        echo Python3.5
+if python3.7 -V | grep -q "Python 3.7" ; then
+        echo python3.7
+        py="python3.7"
+elif python3.5 -V | grep -q "Python 3.5" ; then
+        echo python3.5
         py="python3.5"
 elif python3.6 -V | grep -q -e "Python3.6" -e "Python 3.6" ; then
-        echo Python3.6
+        echo python3.6
         py="python3.6"
+elif python3 -V | grep -q -e "Python" ; then
+        python3 -V
+        py="python3"
 else
-        echo "Python 3.5 or 3.6 not found"
+        echo "Python 3 not found"
         echo "Exiting"
         exit
 fi
