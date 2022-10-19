@@ -42,6 +42,7 @@ SCRIPTS="${CASEDIR}/scripts"
 mkdir -pv $SCRIPTS
 RUN="${SCRIPTS}/run-tensor_post.sh"
 if [[ -f $RUN ]] ; then rm -v $RUN ; fi
+CFApy="${FETALDTI}/cfa_from_tensor.py"
 
 # pick one of the tensor executable outputs
 base=`basename $MASK`
@@ -83,7 +84,8 @@ if [[ ! -f $MTENSOR ]] ; then
 else
 	echo "Masked tensor: $MTENSOR"
     echo "Generate color FA"
-    cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
+    # cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
+    cmd="python $CFApy ${MTENSOR} ${CFA}"
     echo $cmd >> $RUN
     $cmd
 fi

@@ -20,10 +20,10 @@ volumes=${subj}/volumes
 script="/fileserver/fetal/software/dmri_segmentation_3d/dMRI_volume_segmentation.py"
 
 # Check if conda is installed
-if [[ -z `conda` ]] ; then
-    echo "Conda is not installed on $hostname"
-    show_help
-fi
+# if [[ -z `conda` ]] ; then
+#     echo "Conda is not installed on $hostname"
+#     show_help
+# fi
 
 # Run code on each series in volumes/
 # Will mask all vol_x.nii.gz files without "mask" in the name

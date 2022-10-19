@@ -103,7 +103,7 @@ tmpFiles = [str(x) for x in Path(volFolder).iterdir() if x.is_file() and os.path
 for i in tmpFiles:
 	sp.call(( 'mv', '-v', i, dtiFolder))
 
-# Compute FA and Color FA images
+# Convert to float and clean tensor
 #tmpFiles = [str(x) for x in Path(dtiFolder).iterdir() if x.is_file() and os.path.split(str(x))[1].endswith('LLS1.nrrd')]
 print('Computing FA and color FA images')
 tmpFiles = [str(x) for x in Path(dtiFolder).iterdir() if x.is_file() and os.path.split(str(x))[1].find('LLS') and os.path.split(str(x))[1].endswith('.nrrd')]
