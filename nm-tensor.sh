@@ -3,15 +3,11 @@
 show_help () {
 cat << EOF
     Incorrect argument supplied
-    USAGE: sh ${0##*/} -nr -nt -- [input]
-    Testing tensor compute using SVRTK recons
+    USAGE: sh ${0##*/} -nr -- [input]
+    Testing tensor compute using NiftyMIC recons
     Takes previously generated atlas transform and applies it to SVRTK b0/b1 recons
     Then runs tensor compute and cleans the tensor
-    
-    Optional arguments:
-        -nr || --noreg      Will skip slice to volume registration
-        -nt || --noten      Will skip tensor compute
-
+    Optionial argument -nr sets "No Reg"- will skip slice to volume registration
     (Useful if this is already complete)
 
 EOF
@@ -48,16 +44,16 @@ if [ $# -ne 1 ]; then
 fi 
 
 fpath=`readlink -f $1`
+echo "Input data: $fpath"
 id=`basename $fpath`
-echo Input data $fpath
-svrtk=${fpath}/svrtk
-reg=${svrtk}/reg
-ten=${svrtk}/tensor
+nm=${fpath}/niftymic
+reg=${nm}/reg
+ten=${nm}/tensor
 vol=${fpath}/volumes 
-volcopy=${svrtk}/volumes
+volcopy=${nm}/volumes
 mkdir -pv $reg $ten
 
-echo Copying volumes for SVRTK processing
+echo Copying volumes for NiftyMIC processing
 for vdir in ${vol}/* ; do
     if [[ -d $vdir ]] ; then
         vbase=`basename $vdir`
@@ -66,42 +62,39 @@ for vdir in ${vol}/* ; do
     fi
 done
 
-# B0 recon
-b0=`find $svrtk/b0 -name bSVRTK\*z`
+# B0
+b0="${nm}/b0/srr/recon_subject_space/srr_subject.nii.gz"
+b0reg="${reg}/atlas_b0_${id}.nii.gz"
 b0dum="${reg}/dwi_b0_${id}_tensor.nii.gz"
-cp ${b0} -v ${b0dum}
-b0reg=`echo $b0dum | sed 's,dwi_,atlas_,g'`
-# B1 recon
-b1=`find $svrtk/b1 -name bSVRTK\*z`
+cp $b0 -v $b0dum
+# B1
+b1="${nm}/b1/srr/recon_subject_space/srr_subject.nii.gz"
+b1reg="${reg}/atlas_b1_${id}.nii.gz"
 b1dum="${reg}/dwi_b1_${id}.nii.gz"
-cp ${b1} -v ${b1dum}
-b1reg=`echo $b1dum | sed 's,dwi_,atlas_,g'`
+cp $b1 -v $b1dum
 # Transform and mask
 tfm=`find ${reg} -name b\*-atlas\*tfm`
-mask=`find ${id}/t2 -name atlas_mask\*1pt2_refine.nii.gz`
-dilmask="${reg}/dilmask.nii.gz"
+mask=`find ${fpath}/t2 -name atlas_mask\*1pt2_refine.nii.gz`
+dilated=`find ${fpath}/t2 -name atlas_mask\*1pt2\*dilated.nii.gz`
 cp ${mask} -vn ${reg}
-tensorbase="tensorSVRTK_${id}"
+tensorbase="tensorNiftyMIC_${id}"
 
-if [[ -f $b0 && -f $b1 && $tfm && $mask ]] ; then
-    echo Resample
+echo Resample
+if [[ -f $b0 && -f $b1 && $tfm ]] ; then
     echo $id b0
     # Atlas space B0 recon (not used for anything in this script)
-    crlResampler $b0 $tfm $mask bspline $b0reg
+    crlResampler $b0 $tfm $mask bspline ${b0reg}
     echo $id b1
     # Atlas space B1 recon (not used for anything in this script)
-    crlResampler $b1 $tfm $mask bspline $b1reg
-    # Dilate refine mask
-    echo Dilate mask
-    crlBinaryMorphology $mask dilate 1 2 $dilmask
+    crlResampler $b1 $tfm $mask bspline ${b1reg}
     if [[ $noreg -eq 0 ]] ; then
         echo Reg Slices
-        regSliceToVolume -f $b0dum -b $b1dum -d $volcopy -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
+        regSliceToVolume -f ${b0dum} -b ${b1dum} -d $volcopy -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
     fi
     if [[ ${noten} -eq 0 ]] ; then
         echo Compute Tensor
-        computeTensor -b $b0dum -s $dilmask -f $tfm -d $volcopy -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
-        # FYI the output goes into the volumes folder
+        computeTensor -b $b0dum -s $dilated -f $tfm -d $volcopy -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
+        cp ${volcopy}/${tensorbase}* -vn ${ten}/
     fi
     echo "Convert to float and tensor clean"
     for im in ${volcopy}/${tensorbase}*.nrrd ; do
@@ -112,10 +105,10 @@ if [[ -f $b0 && -f $b1 && $tfm && $mask ]] ; then
     echo "Mask image"
     for im in ${ten}/c*z ; do
         cleanbase=`basename $im`
-        crlMaskImage2 -i ${im} -m $mask -o ${ten}/m-${cleanbase}.nii.gz
+        crlMaskImage2 -i $im -m $mask -o ${ten}/m-${cleanbase}.nii.gz 
     done
     echo "Generate CFA"
     mten=`find $ten -name m-c\*CWLLS1.nii.gz | head -n1`
-        python ${FETALDTI}/cfa_from_tensor.py ${mten} ${ten}/SVRTK-atlas_CFA_${id}.nii.gz
+    python ${FETALDTI}/cfa_from_tensor.py ${mten} ${ten}/NiftyMIC-atlas_CFA_${id}.nii.gz
     echo
 fi

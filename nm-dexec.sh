@@ -71,14 +71,14 @@ dockname="nm-$RANDOM"
 
 echo "Container will be named $dockname"
 echo "Mount path within container: $conpath"
-echo "Initializing SVRTK Docker container"
+echo "Initializing NiftyMIC Docker container"
 docker run -id --name $dockname --rm --mount type=bind,source=${mpath},target=${conpath} renbem/niftymic /bin/bash
 echo
 
 # If we are masking with NiftyMIC, we will run the mask script
 if [[ -n $mask ]] ; then
     echo "Execute niftymic_segment_fetal_brains run script"
-    docker exec -t -i -w /home/data $dockname sh -c "sh niftymic/run-mask.sh"
+    docker exec -t -i -w /home/data $dockname sh -c "sh niftymic/run-masks.sh"
     echo
 fi
 

@@ -92,9 +92,9 @@ fi
 
 # Generate list of DICOM folders to convert
 if [[ $sopt=1 ]] ; then
-    allDCM=`find -L ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*'  -o -iname '*b0' -o -iname '*TENSOR' \)`
+    allDCM=`find -L ${DDIR} -type d \( -iname \*${STR}\* \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*'  -o -iname '*b0' -o -iname '*TENSOR' -o -iname '*Lung*' \)`
 else 
-    allDCM=`find -L ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' -o -iname '*b0' -o -iname '*TENSOR'  \)`
+    allDCM=`find -L ${DDIR} -type d \( -iname ${STR} \) -a ! \( -iname '*_ColFA*' -o -iname '*_FA*' -o -iname '*_ADC*' -o -iname '*TRACEW*' -o -iname '*b0' -o -iname '*TENSOR' -o -iname '*Lung*' \)`
 fi
 
 for dcm in ${allDCM} ; do

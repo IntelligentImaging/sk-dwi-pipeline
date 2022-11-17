@@ -22,7 +22,7 @@ B1="dwi_b1_${CASEID}.nii.gz"
 TENSOR="dwi_b0_${CASEID}_tensor.nii" 
 SCRIPTS="${CASEDIR}/scripts"
 rm -rfv ${VOLDIR}/tmp*
-rm -vf volumes/${B0} volumes/${TENSOR} volumes/${B1} b0b1/${B0} b0b1/${TENSOR} b0b1/${B1}
+# rm -vf volumes/${B0} volumes/${TENSOR} volumes/${B1} b0b1/${B0} b0b1/${TENSOR} b0b1/${B1}
 
 # select available python3 version
 if python3.7 -V | grep -q "Python 3.7" ; then

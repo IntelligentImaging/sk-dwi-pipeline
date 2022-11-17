@@ -1,37 +1,62 @@
 #!/bin/bash
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then	
-	echo "Incorrect argument supplied!"
-    echo "usage: sh $0 [CASE DIR] [[opt: Tensor]]"
-	echo "produces AD, FA, CFA, MD, RD from tensor"
-    echo "Uses dti/*CWLLS.nii.gz and t2/atlas_mask*_1pt2_refine.nii.gz"
-    echo "Optional second argument can be used to specify desired tensor"
-    echo
-	exit
-	fi
+show_help () {
+cat << EOF
+    USAGE: sh ${0##*/} [CASE DIR] [[opt: Tensor]]
+    Incorrect input supplied
+	Produces AD, FA, CFA, MD, RD from tensor"
+    By default uses dti/*CWLLS.nii.gz and t2/atlas_mask*_1pt2_refine.nii.gz"
+    Optional argument -t [tensor.nii.gz] specified a tensor to use
+EOF
+}
 
-if [[ ! -d $1 ]] ; then
-    echo err: $1 is not a directory
-    exit 1
-fi
+while :; do
+    case $1 in
+        -h|-\?|--help)
+            show_help # help message
+            exit
+            ;;
+        -t|--tensor)
+            if [[ -f "$2" ]] ; then
+                TENSOR=$2 # Specify
+                shift
+            else
+                die 'error: Tensor not found'
+            fi
+            ;;
+        --) # end of optionals
+            shift
+            break
+            ;;
+        -)?*
+            printf 'warning: unknown option (ignored: %s\m' "$1" >&2
+            ;;
+        *) # default case, no optionals
+            break
+    esac
+    shift
+done
+
+if [ $# -ne 1 ]; then
+    show_help
+    exit
+fi 
+
 DIR=`readlink -f $1`
 
 echo "Searching for tensor and mask"
-if [[ -f $2 ]] ; then 
-    TENSOR=$2
-else TENSOR=`find ${DIR}/dti -maxdepth 1 -type f -name atlas_tensor\*CWLLS1.nii.gz`
+if [[ ! -n $TENSOR ]] ; then 
+    TENSOR=`find ${DIR}/dti -maxdepth 1 -type f -name atlas_tensor\*CWLLS1.nii.gz | head -n1`
 fi
+echo Tensor = $TENSOR
 TBASE=`basename $TENSOR`
 TTBASE="${TBASE%%.*}"
 MASK=`find ${DIR}/t2 -maxdepth 1 -type f -name atlas_mask\*1pt2_refine.nii.gz` 
-if [[ ! -f $TENSOR ]] ; then
-    echo "err: tensor not found (check CASEDIR/dti)"
-    exit 1
-elif [[ ! -f $MASK ]] ; then
+if [[ ! -f $MASK ]] ; then
     echo "err: mask not found (check CASEDIR/t2)"
     exit 1
 fi
-echo "Tensor and mask found"
+echo MASK = $MASK
 
 FULLPATH=`readlink -f $TENSOR`
 CASEDIR="${FULLPATH%/dti*}"
@@ -70,25 +95,24 @@ RD="${OUT}/atlas_RD_${ID}-${METRIC}.nii.gz"
 CFA="${OUT}/atlas_CFA_${ID}-${METRIC}.nii.gz"
 
 # Command for diffusion metrics
-cmd="crlTensorScalarParameter $MTENSOR"
-cmd="$cmd -a $AD"
-cmd="$cmd -f $FA"
-cmd="$cmd -m $MD"
-cmd="$cmd -r $RD"
-echo $cmd >> $RUN
-echo "Generate scalar parameters"
-$cmd
-
-if [[ ! -f $MTENSOR ]] ; then
-	echo "Masked tensor NOT created"
-else
+if [[ -f $MTENSOR ]] ; then
 	echo "Masked tensor: $MTENSOR"
-    echo "Generate color FA"
-    # cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
-    cmd="python $CFApy ${MTENSOR} ${CFA}"
+    cmd="crlTensorScalarParameter $MTENSOR"
+    cmd="$cmd -a $AD"
+    cmd="$cmd -f $FA"
+    cmd="$cmd -m $MD"
+    cmd="$cmd -r $RD"
     echo $cmd >> $RUN
+    echo "Generate scalar parameters"
     $cmd
+    # cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
+    cmd="python $CFApy $MTENSOR $CFA"
+    echo $cmd >> $RUN
+    echo "Generate color FA"
+    $cmd
+else echo "Masked tensor was NOT created"
 fi
+
 if [[ ! -f ${AD} || ! -f ${FA} || ! -f ${MD} || ! -f ${RD} || ! -f ${CFA} ]] ; then
 	echo "Error: Output diffusion parameter(s) missing from ${OUT}"
 else
