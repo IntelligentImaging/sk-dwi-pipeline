@@ -3,7 +3,7 @@
 if [ $# -ne 1 ]; then	
 	echo "Incorrect argument supplied!"
 	echo "usage: sh $0 [best reg]"
-    echo "copies [best reg] to t2_t2_CASEID.nii.gz"
+    echo "copies [best reg] to a tmp dir"
     echo " and clears all other registration attempts"
     echo " WARNING: permanently deletes all un-selected registrations"
 	exit
