@@ -160,6 +160,5 @@ if maskFile == '':
 args = args + ['-m',  folderPath + '/' + tempFolderPrefix + '/' + os.path.split(maskFile)[1]]
 
 argStr = bashExec(args)
-#argStr = bashExec(args)
 
 print("ARGSTR:\n"+argStr)
