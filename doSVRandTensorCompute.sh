@@ -10,6 +10,10 @@ cat << EOF
 EOF
 }
 
+die() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
 
 while :; do
     case $1 in
@@ -18,7 +22,7 @@ while :; do
             exit
             ;;
         -t|--tfm)
-            if [[ -f "$2" ]] ; then
+            if [[ -n "$2" ]] ; then
                 let REG=$2 # Specify
                 shift
             else
