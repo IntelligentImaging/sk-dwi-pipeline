@@ -2,7 +2,7 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [input]
+    USAGE: sh ${0##*/} [input dwi case dir]
     Incorrect input supplied
     Requires a conda installation which can run the dmris3D tool
     To start the environment: $ conda activate d2 

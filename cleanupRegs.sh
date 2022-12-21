@@ -37,6 +37,6 @@ if [[ ! -d $tmpdir ]] ; then
 fi
 
 mv -v ${best} ${b}-t2_*_${met}.tfm ${b}-atlas_*_${met}.tfm ${tmpdir}/
-rm -v ${dir}/t2_b*z ${dir}/b*-t2*tfm
+rm -v ${dir}/t2_b*z ${dir}/b*-t2*tfm ${dir}/b*-atlas*tfm
 mv -v ${tmpdir}/* ${dir}/
 rmdir -v ${tmpdir}
