@@ -27,7 +27,7 @@ while :; do
             ;;
         -t|--tfm)
             if [[ -n "$2" ]] ; then
-                let REG=$2 # Specify
+                REG="$2" # Specify
                 shift
             else
                 die 'error: No transform specified'
@@ -59,7 +59,7 @@ while :; do
     esac
     shift
 done
-if [ $# -ne 1 ]; then
+if [[ $# -ne 1 || ! -f $1 ]] ; then
     show_help
     exit
 fi 
@@ -95,7 +95,6 @@ else
     mpick=`echo $REG | sed 's,b[0-1]\(.*\),\1,g'`
 fi
 echo Registration suffix is $REG
-
 
 tfm="${b0b1}/${bpick}-atlas_${id}_${mpick}.tfm" # DWI to atlas transform
 mask="${t2}/atlas_mask_${id}.nii.gz" # resampled mask
@@ -133,7 +132,7 @@ if [[ $noten -eq 0 ]] ; then
     echo "${id}: Compute tensor"
     dummyb0="${b0_tensor}.gz" # computeTensor does string manipulation for some reason, we need to supply it with a "gz" ending which it stripts off
     computeTensor --baseB0Image $dummyb0 --AtlasBrainMask $dmask --atlasTransformName $tfm --dir $volumes --dtiMethod CWLLS1 --outputTensor $output 
-    # computeTensor also saves output to the same directory as the --dir argument so we need to move them to the dti folder
+    # computeTensor also saves output to the same directory as the --dir argument so we move them to the dti folder
     mv -v ${volumes}/${output}* $dti/
     echo "Compute tensor complete"
 

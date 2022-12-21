@@ -3,7 +3,7 @@
 show_help () {
 cat << EOF
     Incorrect argument supplied
-    USAGE: sh ${0##*/} -nr -nt -- [input]
+    USAGE: sh ${0##*/} -nr -nt -np -im0 -m mask.nii.gz -- [DWI case dir]
     Testing tensor compute using SVRTK recons
     Takes previously generated atlas transform and applies it to SVRTK b0/b1 recons
     Then runs tensor compute and cleans the tensor
@@ -11,6 +11,9 @@ cat << EOF
     Optional arguments:
         -nr || --noreg      Will skip slice to volume registration
         -nt || --noten      Will skip tensor compute
+        -np || --nopost     Will skip Clean/Crop/DWI maps
+        -im0 || --image0    Use 'fuzzy' image0 b0 recon istead of final recon- similar to SK pipeline
+        -m  || --mask       Specify DWI mask for post-processing
 
     (Useful if this is already complete)
 
@@ -28,6 +31,19 @@ while :; do
             ;;
         -nt|--noten)
             let noten=1
+            ;;
+        -np|--nopost)
+            let nopost=1
+            ;;
+        -im0|--image0)
+            let im0=1
+            ;;
+        -m|--mask)
+            if [[ -f $2 ]] ; then
+                tmask=$2
+                shift
+            else "No mask supplied" ; show_help
+            fi
             ;;
         --) # end of optionals
             shift
@@ -67,23 +83,28 @@ for vdir in ${vol}/* ; do
 done
 
 # B0 recon
-b0=`find $svrtk/b0 -name bSVRTK\*z`
-b0dum="${reg}/dwi_b0_${id}_tensor.nii.gz"
+# b0=`find $svrtk/b0 -name bSVRTK\*z`
+b0=`find $svrtk/b0 -name SVRTK\*z`
+b0dum="${reg}/dwi_b0_${id}.nii.gz"
+b0ten="${reg}/dwi_b0_${id}_tensor.nii.gz"
 cp ${b0} -v ${b0dum}
-b0reg=`echo $b0dum | sed 's,dwi_,atlas_,g'`
+b0reg=`echo $b0dum | sed -e 's,dwi_,atlas_,g'`
 # B1 recon
-b1=`find $svrtk/b1 -name bSVRTK\*z`
+# b1=`find $svrtk/b1 -name bSVRTK\*z`
+b1=`find $svrtk/b1 -name SVRTK\*z`
 b1dum="${reg}/dwi_b1_${id}.nii.gz"
 cp ${b1} -v ${b1dum}
 b1reg=`echo $b1dum | sed 's,dwi_,atlas_,g'`
 # Transform and mask
 tfm=`find ${reg} -name b\*-atlas\*tfm`
-mask=`find ${id}/t2 -name atlas_mask\*1pt2_refine.nii.gz`
+# mask=`find ${id}/t2 -name atlas_mask\*1pt2_refine.nii.gz`
+mask=`find ${fpath}/t2 -name atlas_mask\*1pt2.nii.gz`
 dilmask="${reg}/dilmask.nii.gz"
 cp ${mask} -vn ${reg}
+tmask2="${reg}/tmask.nii.gz" # this will be the final mask for tensor post-processing
 tensorbase="tensorSVRTK_${id}"
 
-if [[ -f $b0 && -f $b1 && $tfm && $mask ]] ; then
+if [[ -f $b0 && -f $b1 && $tfm ]] ; then
     echo Resample
     echo $id b0
     # Atlas space B0 recon (not used for anything in this script)
@@ -99,23 +120,46 @@ if [[ -f $b0 && -f $b1 && $tfm && $mask ]] ; then
         regSliceToVolume -f $b0dum -b $b1dum -d $volcopy -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
     fi
     if [[ ${noten} -eq 0 ]] ; then
+        if [[ $im0 -gt 0 ]] ; then
+            echo "Parsing -im0 argument - using fuzzy image0 for tensor computation"
+            image0="${svrtk}/b0/image0.nii.gz"
+            cp $image0 -v $b0ten
+        else
+            echo "Using final SVRTK b0 recon for tensor computation" 
+            cp $b0dum -v $b0ten
+        fi
         echo Compute Tensor
-        computeTensor -b $b0dum -s $dilmask -f $tfm -d $volcopy -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
+        computeTensor -b $b0ten -s $dilmask -f $tfm -d $volcopy -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
         # FYI the output goes into the volumes folder
     fi
-    echo "Convert to float and tensor clean"
-    for im in ${volcopy}/${tensorbase}*.nrrd ; do
-        base=`basename $im .nrrd`
-        crlCastSymMatDoubleToFloat $im ${ten}/${base}.nii.gz
-        crlTensorClean -z -i ${ten}/${base}.nii.gz -o ${ten}/c${base}.nii.gz
-    done
-    echo "Mask image"
-    for im in ${ten}/c*z ; do
-        cleanbase=`basename $im`
-        crlMaskImage2 -i ${im} -m $mask -o ${ten}/m-${cleanbase}.nii.gz
-    done
-    echo "Generate CFA"
-    mten=`find $ten -name m-c\*CWLLS1.nii.gz | head -n1`
-        python ${FETALDTI}/cfa_from_tensor.py ${mten} ${ten}/SVRTK-atlas_CFA_${id}.nii.gz
-    echo
+    if [[ ${nopost} -eq 0 ]] ; then
+        echo "Convert to float and tensor clean"
+        for im in ${volcopy}/${tensorbase}*.nrrd ; do
+            base=`basename $im .nrrd`
+            crlCastSymMatDoubleToFloat $im ${ten}/${base}.nii.gz
+            crlTensorClean -z -i ${ten}/${base}.nii.gz -o ${ten}/c${base}.nii.gz
+        done
+        if [[ -f $mask ]] ; then
+            echo "Mask image"
+            if [[ -n $tmask ]] ; then
+                echo "User specified tensor mask"
+                cp $tmask -v $tmask2
+            else
+                echo "Mask is from T2 folder"
+                cp $mask -v $tmask2
+            fi
+            for im in ${ten}/c*z ; do
+                cleanbase=`basename $im`
+                crlMaskImage2 -i ${im} -m $tmask2 -o ${ten}/m-${cleanbase}.nii.gz
+            done
+            echo "Generate CFA"
+            mten=`find $ten -name m-c\*CWLLS1.nii.gz | head -n1`
+                python ${FETALDTI}/cfa_from_tensor.py ${mten} ${ten}/SVRTK-atlas_CFA_${id}.nii.gz
+            echo
+        else
+            echo "Mask not found, can't crop or make CFA"
+        fi
+    fi
+else
+    echo "One of b0, b1 or tfm-to-atlas not found"
 fi
