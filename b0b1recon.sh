@@ -2,8 +2,14 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [-g GPU device number] [-i number of recon iterations] [-m mask] -- [ROI crop or DWI subject folder]
+    USAGE: sh ${0##*/} [-g GPU device] [-i iterations] [-l lambda] [-m mask] -- [ROI crop or DWI subject folder]
     Incorrect input supplied
+    -g      select a gpu device
+    -i      number of recon iterations
+    -l      lambda smoothing parameter (default=0.02)
+    -ll     last iteration lambda smoothing parameter (default=0.01) 
+    --nob0  Skip b0 reconstruction
+    --nob1  Skip b1 reconstruction
 EOF
 }
 
@@ -32,6 +38,22 @@ while :; do
                 shift
             else
                 die 'error: Specify number of reconstruction iterations'
+            fi
+            ;;
+        -l|--lambda)
+            if [[ -n $2 ]] ; then
+                lam=$2 # smoothing lambda (default=0.02)
+                shift
+            else
+                die 'error: Specify smoothing lambda'
+            fi
+            ;;
+        -ll|--lastIterLambda)
+            if [[ -n $2 ]] ; then
+                lastlam=$2 # smoothing lambda (default=0.02)
+                shift
+            else
+                die 'error: Specify last iteration smoothing lambda'
             fi
             ;;
         -m|--mask)
@@ -139,6 +161,8 @@ if [[ ! $nob0 -eq 1 ]] ; then
     cmd="SVRreconstructionGPU --input $b0s -o ${tmpB0}/b0.nii.gz --referenceVolume ${crop} --resolution=0.75 --mask $mask"
     if [[ -n $gpu ]] ; then cmd="$cmd -d $gpu" ; fi
     if [[ -n $iter ]] ; then cmd="$cmd --iterations $iter" ; fi
+    if [[ -n $lam ]] ; then cmd="$cmd --lambda $lam" ; fi
+    if [[ -n $lastlam ]] ; then cmd="$cmd --lastIterLambda $lastlam" ; fi
     echo "Command: $cmd"
     $cmd
     cp $b0source -v $b0dest # tmpB0/image1_GPU.nii.gz becomes dwi_b0_id.nii.gz
@@ -154,6 +178,8 @@ if [[ ! $nob1 -eq 1 ]] ; then
     cmd="SVRreconstructionGPU --input $b1s -o ${tmpB0}/b1.nii.gz --referenceVolume ${crop} --resolution=0.75 --mask $mask"
     if [[ -n $gpu ]] ; then cmd="$cmd -d $gpu" ; fi
     if [[ -n $iter ]] ; then cmd="$cmd --iterations $iter" ; fi
+    if [[ -n $lam ]] ; then cmd="$cmd --lambda $lam" ; fi
+    if [[ -n $lastlam ]] ; then cmd="$cmd --lastIterLambda $lastlam" ; fi
     echo "Command: $cmd"
     $cmd 
     if [[ -f $b1source ]] ; then
@@ -165,8 +191,10 @@ if [[ ! $nob1 -eq 1 ]] ; then
 else echo --nob1 was specified
 fi
 
+ls $volumes > ${b0b1}/vols.txt 
+
 # Check outputs
-if [[ -f $b0dest} ]] ; then
+if [[ -f $b0dest ]] ; then
     echo "B0 = $b0dest" ; else echo "B0 not generated" ; err=1
 fi
 if [[ -f $tendest ]] ; then
@@ -174,9 +202,4 @@ if [[ -f $tendest ]] ; then
 fi
 if [[ -f $b1dest ]] ; then
     echo "B1 = $b1dest" ; else echo "B1 not generated" ; err=1
-fi
-if [[ ! $err -ne 1 ]] ; then
-    echo "Output to b0b1/"
-    echo "Now prepare T2 data set (DTIfetal-t2atlas.sh), copy to caseID/t2 directory, and run registerB0B1toT2"
-else echo "Something went wrong"
 fi

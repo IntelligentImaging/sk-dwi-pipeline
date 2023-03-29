@@ -7,7 +7,7 @@ cat << EOF
 
     Optional arguments:
     -a ALPHA    Sets strength of smoothing effect. Default alpha is 0.01.
-    -m          Adds a NiftyMIC pipeline step for masking the input volumes
+    -m          Tells NiftyMIC to set up and use segment_fetal_brains (brain masks) 
 EOF
 }
 
@@ -59,7 +59,7 @@ b1out=${b1dir}/srr
 runmask=${nm}/run-masks.sh
 # b0list="${subj}/${b0dir}/b0list.txt"
 # b1list="${subj}/${b1dir}/b1list.txt"
-mkdir -pv ${subj}/${b0dir} ${subj}/${b1dir} ${subj}/${b0dir}/{t2,mask} ${subj}/${b1dir}/{t2,mask}
+mkdir -pv ${subj}/${b0dir} ${subj}/${b1dir} ${subj}/${b0dir}/{image,mask} ${subj}/${b1dir}/{image,mask}
 if [[ -f $runb0 ]] ; then rm $runb0 ; fi
 if [[ -f $runb1 ]] ; then rm $runb1 ; fi
 # if [[ -f $b0list ]] ; then rm $b0list ; fi
@@ -79,14 +79,14 @@ for dwi in ${subj}/volumes/* ; do
             echo ${dwi}/vol_${lead}.nii.gz $b # this is the volume-bvalue combo
             # if 0, use for B0 recon, if greater than 0, use for B1 recon
             if [[ $b -eq 0 ]] ; then
-                cp ${dwi}/vol_${lead}.nii.gz -uv ${subj}/${b0dir}/t2/${base}_vol_${lead}.nii.gz
+                cp ${dwi}/vol_${lead}.nii.gz -uv ${subj}/${b0dir}/image/${base}_vol_${lead}.nii.gz
                 # Option check if we have pre-existing masks
                 if [[ -z $domask ]] ; then
                     cp ${dwi}/vol_${lead}_mask.nii.gz -uv ${subj}/${b0dir}/mask/${base}_vol_${lead}_mask.nii.gz
                 fi
             # These go to the b1 recon directory
             elif [[ $b > 0 ]] ; then
-                cp ${dwi}/vol_${lead}.nii.gz -uv ${subj}/${b1dir}/t2/${base}_vol_${lead}.nii.gz
+                cp ${dwi}/vol_${lead}.nii.gz -uv ${subj}/${b1dir}/image/${base}_vol_${lead}.nii.gz
                 # Option check if we have pre-existing masks
                 if [[ -z $domask ]] ; then
                     cp ${dwi}/vol_${lead}_mask.nii.gz -uv ${subj}/${b1dir}/mask/${base}_vol_${lead}_mask.nii.gz
@@ -102,13 +102,13 @@ if [[ -n $domask ]] ; then
     if [[ -f $runmask ]] ; then rm -v $runmask ; fi
     echo "#!/bin/bash" >> $runmask
     echo "niftymic_segment_fetal_brains --filenames \\" >> $runmask
-    for im in ${subj}/${nm}/b*/t2/*z ; do
+    for im in ${subj}/${nm}/b*/image/*z ; do
         impath=`echo $im | sed 's,.*niftymic\/b,/home/data/niftymic\/b,g'`
         echo "$impath \\" >> $runmask
     done
     echo "--filenames-masks \\" >> $runmask
-    for im in ${subj}/${nm}/b*/t2/*z ; do
-        mask=`echo $im | sed -e 's,.*\(b[0,1]\/\)t2,/home/data/niftymic/\1mask,g' -e 's,.nii.gz,_mask.nii.gz,g'`
+    for im in ${subj}/${nm}/b*/image/*z ; do
+        mask=`echo $im | sed -e 's,.*\(b[0,1]\/\)image,/home/data/niftymic/\1mask,g' -e 's,.nii.gz,_mask.nii.gz,g'`
         echo "$mask \\" >> $runmask
     done
     echo Wrote niftymic_segment_fetal_brains run script: $runmask
@@ -119,7 +119,7 @@ fi
 # Write script for b0 recon
 # echo "cd ${b0dir}" >> $runb0
 echo "niftymic_run_reconstruction_pipeline --filenames \\" >> $runb0
-for im in ${subj}/${b0dir}/t2/*z ; do
+for im in ${subj}/${b0dir}/image/*z ; do
 	impath=`echo $im | sed 's,.*niftymic,niftymic,g'`
     echo "/home/data/$impath \\" >> $runb0
 done
@@ -135,7 +135,7 @@ echo "--alpha $alpha" >> $runb0
 # Write script for b1 recon
 # echo "cd ${b1dir}" >> $runb1 
 echo "niftymic_run_reconstruction_pipeline --filenames \\" >> $runb1
-for im in ${subj}/${b1dir}/t2/*z ; do
+for im in ${subj}/${b1dir}/image/*z ; do
 	impath=`echo $im | sed 's,.*niftymic,niftymic,g'`
     echo "/home/data/$impath \\" >> $runb1
 done

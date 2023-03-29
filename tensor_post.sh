@@ -2,7 +2,7 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [CASE DIR] [[opt: Tensor]]
+    USAGE: sh ${0##*/} -t [specify tensor] -- [CASE DIR] 
     Incorrect input supplied
 	Produces AD, FA, CFA, MD, RD from tensor"
     By default uses dti/*CWLLS.nii.gz and t2/atlas_mask*_1pt2_refine.nii.gz"

@@ -6,7 +6,7 @@ STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*BRAIN-DTI*' -o -iname '*D
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
+    USAGE: sh ${0##*/} [--crl] [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
     Incorrect input supplied
     
     Takes DWI series in DICOM/ and converts to 4D (placed in nrrd/) and 3D (placed in volumes/) formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
@@ -16,15 +16,25 @@ cat << EOF
         t2/ b0b1/ nrrd/ volumes/ scripts/
 
     Optional arguments:
-        -d  Supply the raw data directory to convert. This script will set up symbolic
-            links to the data. 
+        --crl   Uses a combination of crlDICOMConverter to convert from DICOM to NHDR and
+                crlDWIConvertNHDRForFSL to generate bvecs instead of dcmniix for both.
+        --onlyNHDR  Only make the NHDR files, don't copy them to the volumes folder. Use
+                this in conjunction with --crl.
+            
+        -d      Supply the raw data directory to convert. This script will set up symbolic
+                links to the data. 
         
-        -s  Specify string of DWI folder which will be converted.
-            By default the script will look for DICOM series with the 
-            following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion,
-                FetalDTI, BRAINDTI, SMS2_DTI
-            The default list can be edited at the top of the script
+        -s      Specify string of DWI folder which will be converted.
+                By default the script will look for DICOM series with the 
+                following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion,
+                    FetalDTI, BRAINDTI, SMS2_DTI
+                The default list can be edited at the top of the script
 EOF
+}
+
+die() {
+    printf '%s\n' "$1" >&2
+    exit 1
 }
 
 while :; do
@@ -40,6 +50,12 @@ while :; do
             else
                 die 'error: "-d" requires a DICOM directory'
             fi
+            ;;
+        --crl)
+            let useCRL=1
+            ;;
+        --onlyNHDR)
+            let onlyNHDR=1
             ;;
         -s|--string)
             if [[ -n "$2" ]] ; then
@@ -78,9 +94,11 @@ id=`basename $idpath`
 DICOM="${idpath}/DICOM"
 NRRD="${idpath}/nrrd"
 VOLUMES="${idpath}/volumes"
+NHDR="${idpath}/nhdr"
 
 if [[ -n ${DDIR} ]] ; then
-    check=`find ${DICOM} -mindepth 1 2>/dev/null`
+    echo "Check for existing DICOMs (find: 'no such file or directory' message here is OK)"
+    check=`find ${DICOM}/ -mindepth 1 | head -n1` # Because this may be a symlink, we need the slash after ${DICOM}
     if [[ -n $check ]] ; then
         echo "DICOM dir already has files, do you need to clear it first?"
         exit 1
@@ -155,14 +173,33 @@ for dcm in ${allDCM} ; do
         echo "Slice timing file: $sliceT"
         echo
 
-        # FSL SPLIT and copy to volumes folderi
-        echo "Split 4D to 3D"
-        fslsplit ${nifti} ${out3D}/vol_ -t
+        if [[ $useCRL -eq 1 ]] ; then
+            crlbvals="${NHDR}/${base}/bvals"
+            crlbvecs="${NHDR}/${base}/bvecs"
+            crl4D="${NHDR}/${base}/dwi4D.nii.gz"
+            echo "Creating CRL NHDR to extract standardized bvecs"
+            mkdir -pv $NHDR/${base}
+            crlDICOMConverter -d ${dcm} -p ${NHDR}/${base}/vol 
+            crlDWIConvertNHDRForFSL -i ${NHDR}/${base}/vol*diffusion*nhdr --data ${crl4D} --bvecs ${crlbvecs} --bvals ${crlbvals} --automirrorx 0
+        fi
+
+        # FSL SPLIT and copy to volumes folder
+        if [[ $useCRL -eq 1 && $onlyNHDR -ne 1 ]] ; then
+            echo "Split 4D to 3D: CRL converted volumes"
+            fslsplit ${crl4D} ${out3D}/vol_ -t
+        else echo "Split 4D to 3D: dcm2niix converted volumes" 
+            fslsplit ${nifti} ${out3D}/vol_ -t
+        fi
         echo
 
         # Copy bvals, bvecs, and sliceTiming.txt to the recon directory
-        echo "Copy to reconstruction directory"
-        cp ${bvals} ${bvecs} ${sliceT} -v ${out3D} 
+        echo "Copy gradient info and slice timing to reconstruction directory"
+        if [[ $useCRL -eq 1 && $onlyNHDR -ne 1 ]] ; then
+            echo "Use CRL bvals and bvecs"
+            cp ${crlbvals} ${crlbvecs} ${sliceT} -v ${out3D}
+        else echo "Use dcm2niix bvals/bvecs"
+            cp ${bvals} ${bvecs} ${sliceT} -v ${out3D} 
+        fi
         
         echo
     fi

@@ -2,19 +2,19 @@
 
 if [ $# -ne 1 ]; then	
 	echo "Incorrect argument supplied!"
-	echo "usage: sh $0 casepath/b0b1/dwi_b0_SUBJID.nii.gz"
+	echo "usage: sh $0 casepath"
 	exit
 fi
 
 # set paths
-B0=`readlink -f ${1}`
+CASEDIR=`readlink -f ${1}`
+ID=`basename $CASEDIR`
+b0b1="${CASEDIR}/b0b1"
+B0="${b0b1}/dwi_b0_${ID}.nii.gz"
 if [[ ! -f $B0 ]] ; then
 	echo "Supplied B0 image not found"
 	exit 
 fi
-CASEDIR="${B0%/b0b1*}"
-b0b1=`dirname $B0`
-ID=`basename $CASEDIR`
 atlas_t2="${CASEDIR}/t2/atlas_t2_${ID}.nii.gz"
 atlas_mask="${CASEDIR}/t2/atlas_mask_${ID}.nii.gz"
 t2_t2="${CASEDIR}/t2/t2_t2_${ID}.nii.gz"

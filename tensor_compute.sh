@@ -2,7 +2,7 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [-t reg-suffix] [-d dilation] [-nr] [-nt] -- [dwi_b0_SUBJID.nii.gz]
+    USAGE: sh ${0##*/} [-t reg-suffix] [-d dilation] [-nr] [-nt] -- [case dir]
     Incorrect input supplied
 
     -t || --tfm     Specify registration to use for tensor computation and atlas transform
@@ -59,18 +59,18 @@ while :; do
     esac
     shift
 done
-if [[ $# -ne 1 || ! -f $1 ]] ; then
+if [[ $# -ne 1 || ! -d $1 ]] ; then
     show_help
     exit
 fi 
 
-b0=`readlink -f ${1}`
-b0b1=`dirname $b0`
-CASEDIR="${b0%/b0b1*}"
+CASEDIR=`readlink -f $1`
 id=`basename $CASEDIR`
-dti="${CASEDIR}/dti"
+b0b1="${CASEDIR}/b0b1"
+b0="${b0b1}/dwi_b0_${id}.nii.gz"
 b1="${b0b1}/dwi_b1_${id}.nii.gz"
 b0_tensor="${b0b1}/dwi_b0_${id}_tensor.nii"
+dti="${CASEDIR}/dti"
 t2="${CASEDIR}/t2"
 volumes="${CASEDIR}/volumes"
 
@@ -131,7 +131,7 @@ if [[ $noten -eq 0 ]] ; then
     crlBinaryMorphology $rmask dilate 1 $DIL $dmask
     echo "${id}: Compute tensor"
     dummyb0="${b0_tensor}.gz" # computeTensor does string manipulation for some reason, we need to supply it with a "gz" ending which it stripts off
-    computeTensor --baseB0Image $dummyb0 --AtlasBrainMask $dmask --atlasTransformName $tfm --dir $volumes --dtiMethod CWLLS1 --outputTensor $output 
+    computeTensor --baseB0Image $dummyb0 --AtlasBrainMask $dmask --atlasTransformName $tfm --dir $volumes --dtiMethod CWLLS1 --outputTensor $output -w 2 -g 0.63405 
     # computeTensor also saves output to the same directory as the --dir argument so we move them to the dti folder
     mv -v ${volumes}/${output}* $dti/
     echo "Compute tensor complete"
