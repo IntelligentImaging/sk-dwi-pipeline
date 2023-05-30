@@ -31,7 +31,7 @@ For the final steps you will require a couple files from the T2 reconstruction.
   6. Regenerate atlas and T2-space images and transforms: `sh dwi-recon-pipeline/t2auto.sh PATH/TO/reconstruction/CASEID/nii/ PATH/TO/diffusion/CASEID/`
   7. Register B0B1 to T2 space: `sh /fileserver/fetal/scripts/DTIfetal/register.sh [b0b1/dwi_b0_SUBJID.nii.gz]`
   8. Review registration attempts and note the best registration to t2_t2 found in `t2/`
-  9. Compute tensor image: sh dwi-recon-pipeline/tensor_compute.sh `[b0b1/dwi_b0_SUBJID.nii.gz]`
+  9. Compute tensor image: `sh dwi-recon-pipeline/tensor_compute.sh [b0b1/dwi_b0_SUBJID.nii.gz]`
   10. refine `t2/atlas_mask_CASEID_1pt2.nii.gz`, save as `t2/atlas_mask_CASEID_1pt2_refine.nii.gz`
   11. Mask tensor, generate dwi maps, RGB, etc: `sh dwi-recon-pipeline/tensor_post.sh [CASE DIR]`
   12. Run TrackVis to create a .trk tract file: `sh dwi-recon-pipeline/runTrackVis.sh [CASE DIR]`
