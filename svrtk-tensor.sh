@@ -69,18 +69,8 @@ echo Input data $fpath
 svrtk=${fpath}/svrtk
 reg=${svrtk}/reg
 ten=${svrtk}/tensor
-vol=${fpath}/volumes 
-volcopy=${svrtk}/volumes
+vol=${svrtk}/volumes 
 mkdir -pv $reg $ten
-
-echo Copying volumes for SVRTK processing
-for vdir in ${vol}/* ; do
-    if [[ -d $vdir ]] ; then
-        vbase=`basename $vdir`
-        mkdir -pv ${volcopy}/${vbase}
-        cp ${vdir}/vol_????.nii.gz ${vdir}/bvals ${vdir}/bvecs ${vdir}/sliceTiming.txt -n ${volcopy}/${vbase}
-    fi
-done
 
 # B0 recon
 # b0=`find $svrtk/b0 -name bSVRTK\*z`
@@ -98,9 +88,10 @@ b1reg=`echo $b1dum | sed 's,dwi_,atlas_,g'`
 # Transform and mask
 tfm=`find ${reg} -name b\*-atlas\*tfm`
 # mask=`find ${id}/t2 -name atlas_mask\*1pt2_refine.nii.gz`
-mask=`find ${fpath}/t2 -name atlas_mask\*1pt2.nii.gz`
-dilmask="${reg}/dilmask.nii.gz"
-cp ${mask} -vn ${reg}
+mask=`find ${fpath}/t2 -name atlas_mask_${id}.nii.gz`
+rmask="${ten}/atlas_mask_${id}_iso.nii.gz"
+dilmask="${ten}/atlas_mask_${id}_diso.nii.gz"
+# cp ${mask} -vn ${ten}
 tmask2="${reg}/tmask.nii.gz" # this will be the final mask for tensor post-processing
 tensorbase="tensorSVRTK_${id}"
 
@@ -112,12 +103,17 @@ if [[ -f $b0 && -f $b1 && $tfm ]] ; then
     echo $id b1
     # Atlas space B1 recon (not used for anything in this script)
     crlResampler $b1 $tfm $mask bspline $b1reg
+    # Resample mask for DWI
+    echo Resample mask to isotropic for DWI
+    crlResampleToIsotropic $mask nearest $rmask -x 1.2 -y 1.2 -z 1.2
     # Dilate refine mask
     echo Dilate mask
-    crlBinaryMorphology $mask dilate 1 2 $dilmask
+    crlBinaryMorphology $rmask dilate 1 2 $dilmask
     if [[ $noreg -eq 0 ]] ; then
         echo Reg Slices
-        regSliceToVolume -f $b0dum -b $b1dum -d $volcopy -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
+        regSliceToVolume -f $b0dum -b $b1dum -d $vol -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
+        echo "Renaming transforms to have '-Estimated' tag"
+        rename ${id}-Estimated ${id}_tensor-Estimated ${svrtk}/volumes/*/dwi*tfm
     fi
     if [[ ${noten} -eq 0 ]] ; then
         if [[ $im0 -gt 0 ]] ; then
@@ -125,16 +121,17 @@ if [[ -f $b0 && -f $b1 && $tfm ]] ; then
             image0="${svrtk}/b0/image0.nii.gz"
             cp $image0 -v $b0ten
         else
-            echo "Using final SVRTK b0 recon for tensor computation" 
+            echo "Using final SVRTK b0 recon for tensor computation (use -im0 instead to use fuzzy version)" 
             cp $b0dum -v $b0ten
         fi
         echo Compute Tensor
-        computeTensor -b $b0ten -s $dilmask -f $tfm -d $volcopy -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
+        gunzip -fv $b0ten
+        computeTensor -b $b0ten -s $dilmask -f $tfm -d $vol -t CWLLS1 -o $tensorbase -w 2 -g 0.63405
         # FYI the output goes into the volumes folder
     fi
     if [[ ${nopost} -eq 0 ]] ; then
         echo "Convert to float and tensor clean"
-        for im in ${volcopy}/${tensorbase}*.nrrd ; do
+        for im in ${vol}/${tensorbase}*.nrrd ; do
             base=`basename $im .nrrd`
             crlCastSymMatDoubleToFloat $im ${ten}/${base}.nii.gz
             crlTensorClean -z -i ${ten}/${base}.nii.gz -o ${ten}/c${base}.nii.gz
@@ -145,8 +142,8 @@ if [[ -f $b0 && -f $b1 && $tfm ]] ; then
                 echo "User specified tensor mask"
                 cp $tmask -v $tmask2
             else
-                echo "Mask is from T2 folder"
-                cp $mask -v $tmask2
+                echo "Mask is the resampled mask"
+                cp $rmask -v $tmask2
             fi
             for im in ${ten}/c*z ; do
                 cleanbase=`basename $im`

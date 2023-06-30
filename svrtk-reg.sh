@@ -1,11 +1,42 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then	
-	echo "Incorrect argument supplied!"
-	echo "usage: sh $0 casepath"
-    echo "checks casepath/svrtk/b0/SVRTK-dwi_b0_id.nii.gz and b1/SVRTK-dwi_b1_id.nii.gz"
-	exit
-fi
+show_help () {
+cat << EOF
+    USAGE: sh ${0##*/} [input]
+    Incorrect input supplied
+    Checks casepath/svrtk/b0/SVRTK-dwi_b0_id.nii.gz and b1/SVRTK-dwi_b1_id.nii.gz and runs registration
+    If you already have a transform, you don't need this step
+EOF
+}
+
+die() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+
+while :; do
+    case $1 in
+        -h|-\?|--help)
+            show_help # help message
+            exit
+            ;;
+        --) # end of optionals
+            shift
+            break
+            ;;
+        -)?*
+            printf 'warning: unknown option (ignored: %s\m' "$1" >&2
+            ;;
+        *) # default case, no optionals
+            break
+    esac
+    shift
+done
+
+if [ $# -ne 1 ]; then
+    show_help
+    exit
+fi 
 
 # set paths
 CASEDIR=`readlink -f ${1}`
@@ -24,13 +55,12 @@ tfm_t2atlas="${CASEDIR}/t2/t2-atlas_${ID}.tfm"
 
 echo $ID
 # check for T2 files
-if ! [[ -f $atlas_t2 && $atlas_mask && $t2_t2 && $t2_mask && $tfm_t2atlas ]] ; then
+if ! [[ -f $atlas_t2 && $atlas_mask && $t2_t2 && $t2_mask ]] ; then
 	echo "One of the following required files not found:"
 	echo ${CASEDIR}/t2/atlas_t2_${ID}.nii.gz
 	echo ${CASEDIR}/t2/atlas_mask_${ID}.nii.gz
 	echo ${CASEDIR}/t2/t2_t2_${ID}.nii.gz
 	echo ${CASEDIR}/t2/t2_mask_${ID}.nii.gz
-	echo ${CASEDIR}/t2/t2-atlas_${ID}.tfm
 	exit
 fi
 

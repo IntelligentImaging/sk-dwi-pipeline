@@ -2,7 +2,7 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [subj DWI directory] [mask for recon]
+    USAGE: sh ${0##*/} [subj converted data dir] [mask for recon]
     Incorrect argument supplied
 EOF
 }
@@ -12,11 +12,13 @@ if [ $# -ne 2 ]; then
     exit
 fi 
 
-subj=`readlink -f $1`
+data=`readlink -f $1`
+subj=`dirname $data`
 id=`basename $subj`
 mask="$2"
 svrtk="svrtk"
-mkdir -pv ${subj}/svrtk
+volumes="${subj}/svrtk/volumes"
+mkdir -pv ${subj}/svrtk ${volumes}
 cp $mask -v ${subj}/${svrtk}/mask_svrtk.nii.gz
 svrmask="/home/data/${svrtk}/mask_svrtk.nii.gz"
 b0dir=${svrtk}/b0
@@ -34,18 +36,25 @@ if [[ -f $b0list ]] ; then rm $b0list ; fi
 if [[ -f $b1list ]] ; then rm $b1list ; fi
 
 # volumes/ has the 3D split dwi volumes in separate folders for each scan
-for dwi in ${subj}/volumes/* ; do
+for dwi in ${data}/* ; do
     if [[ -d $dwi ]] ; then 
+        base=`basename $dwi`
+        echo "Split DWI to 3D volumes with FSL"
+        split="${volumes}/${base}"
+        mkdir -pv ${split}
+        fslsplit ${dwi}/*z ${split}/vol_ -t
+        cp ${dwi}/bvals ${dwi}/bvecs ${subj}/dcm2niix/${base}/sliceTiming.txt -vp ${split}/
+
         let x=0 # this assumes the volumes are named/numbered vol_0000, vol_0001, etc
         # Read the bvals text file for bvalues
         for b in `cat ${dwi}/bvals` ; do 
             lead=$(printf "%04d" $x) # changes the index to have four leading 0's
-            echo ${dwi}/vol_${lead}.nii.gz $b # this is the volume-bvalue combo
+            echo ${split}/vol_${lead}.nii.gz $b # this is the volume-bvalue combo
             # if 0, use for B0 recon, if greater than 0, use for B1 recon
             if [[ $b -eq 0 ]] ; then
-                echo ${dwi}/vol_${lead}.nii.gz >> ${b0list}
+                echo ${split}/vol_${lead}.nii.gz >> ${b0list}
             elif [[ $b > 0 ]] ; then
-                echo ${dwi}/vol_${lead}.nii.gz >> ${b1list}
+                echo ${split}/vol_${lead}.nii.gz >> ${b1list}
             fi
             ((x++)) # increase index by one
         done
@@ -57,10 +66,10 @@ nb0=`wc -l ${b0list} | cut -d' ' -f1`
 nb1=`wc -l ${b1list} | cut -d' ' -f1`
 
 # Write script for b0 recon
-echo "cd ${b0dir}" >> $runb0
+echo "cd /home/data/${b0dir}" >> $runb0
 echo "mirtk reconstruct $b0SVR $nb0 \\" >> $runb0
 for im in `cat $b0list` ; do
-	impath=`echo $im | sed 's,.*volumes,volumes,g'`
+	impath=`echo $im | sed 's,.*svrtk/volumes,svrtk/volumes,g'`
     echo "/home/data/$impath \\" >> $runb0
 done
 echo "-mask $svrmask \\" >> $runb0
@@ -70,10 +79,10 @@ echo "-iterations 3" >> $runb0
 echo "cd /home/data" >> $runb0
 
 # Write script for b1 recon
-echo "cd ${b1dir}" >> $runb1 
+echo "cd /home/data/${b1dir}" >> $runb1 
 echo "mirtk reconstruct $b1SVR $nb1 \\" >> $runb1
 for im in `cat $b1list` ; do
-	impath=`echo $im | sed 's,.*volumes,volumes,g'`
+	impath=`echo $im | sed 's,.*svrtk/volumes,svrtk/volumes,g'`
     echo "/home/data/$impath \\" >> $runb1
 done
 echo "-mask $svrmask \\" >> $runb1
