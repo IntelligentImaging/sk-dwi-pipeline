@@ -6,28 +6,28 @@ STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*BRAIN-DTI*' -o -iname '*D
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [--crl] [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
+    USAGE: sh ${0##*/} [--mrtrix || --crl || --dcm2niix] [--noOver] [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
     Incorrect input supplied
     
     Takes DWI series in DICOM/ and converts to 4D (placed in nrrd/) and 3D (placed in volumes/) formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
     
-    Required argument:
-    [Subject Directory] is the DWI processing directory- it will have folders named DICOM/
-        t2/ b0b1/ nrrd/ volumes/ scripts/
+    [Subj Dir] The subject's DWI processing directory
 
     Optional arguments:
-        --crl   Uses a combination of crlDICOMConverter to convert from DICOM to NHDR and
-                crlDWIConvertNHDRForFSL to generate bvecs instead of dcmniix for both.
-        --onlyNHDR  Only make the NHDR files, don't copy them to the volumes folder. Use
-                this in conjunction with --crl.
+        --mrtrix    Use mrtrix mrconvert to convert images and get bvals/bvecs
+
+        --crl       Use crlDICOMConverter for DICOM->NHDR and
+                    crlDWIConvertNHDRForFSL for bvecs/bvals
+
+        --dcm2niix  Use dcm2niix to convert DICOM->.nii.gz and get bvals/bvecs
+
+        --noOver    Do not overwrite files already in volumes/ 
             
-        -d      Supply the raw data directory to convert. This script will set up symbolic
-                links to the data. 
+        -d      Supply the raw data directory to convert. This script will set up symbolic links to the data. 
         
         -s      Specify string of DWI folder which will be converted.
                 By default the script will look for DICOM series with the 
-                following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion,
-                    FetalDTI, BRAINDTI, SMS2_DTI
+                following strings: BRAIN-DTI, BRAIN_DTI, DTI_Fetal, IVIM_DWI, Diffusion, FetalDTI, BRAINDTI, SMS2_DTI
                 The default list can be edited at the top of the script
 EOF
 }
@@ -51,11 +51,17 @@ while :; do
                 die 'error: "-d" requires a DICOM directory'
             fi
             ;;
+        --dcm2niix)
+            let useDCM=1
+            ;;
+        --mrtrix)
+            let useMRTRIX=1
+            ;;
         --crl)
             let useCRL=1
             ;;
-        --onlyNHDR)
-            let onlyNHDR=1
+        --noOver)
+            let noOver=1
             ;;
         -s|--string)
             if [[ -n "$2" ]] ; then
@@ -92,9 +98,15 @@ fi
 
 id=`basename $idpath`
 DICOM="${idpath}/DICOM"
-NRRD="${idpath}/nrrd"
+NII="${idpath}/dcm2niix"
 VOLUMES="${idpath}/volumes"
 NHDR="${idpath}/nhdr"
+MRTRIX="${idpath}/mrconvert"
+
+if [[ $useCRL -ne 1 && $useMRTRIX -ne 1 && $useDCM -ne 1 ]] ; then
+    die 'You need to specify which conversion program to use'
+fi
+
 
 if [[ -n ${DDIR} ]] ; then
     echo "Check for existing DICOMs (find: 'no such file or directory' message here is OK)"
@@ -118,13 +130,19 @@ fi
 for dcm in ${allDCM} ; do
     if [[ -d $dcm ]] ; then
         # INITIAL DCM2NIIX CONVERT, RENAME FILES, GENERATE SLICE TIMING
+        # We also convert with dcm2niix because it gives us a backup if slicetiming wasn't pulled from dicom tags
         echo "Converting $dcm"
         base=`basename $dcm`
-        out4D="${NRRD}/${base}"
+        out4D="${NII}/${base}"
         out3D="${VOLUMES}/${base}"
-        mkdir -pv ${out4D} ${out3D}
+        mkdir -pv ${out4D}
         dcm2niix -z y -f %s_%d -w 1 -o ${out4D} ${dcm}
         nifti=`find ${out4D} -type f -name \*.nii.gz`
+        if [[ ! -f $nifti ]] ; then
+            echo "Conversion didn't run for some reason. Trying next image."
+            continue
+        fi
+
         nbase=`basename $nifti .nii.gz`
         echo
         
@@ -173,34 +191,55 @@ for dcm in ${allDCM} ; do
         echo "Slice timing file: $sliceT"
         echo
 
+        # If CRL option is set, we also convert using CRL tools
         if [[ $useCRL -eq 1 ]] ; then
+            # Nested folders don't work here, need to re-assign input
+            nest=`find $dwi -mindepth 1 -type d`
+            if [[ -n $nest ]] ; then
+                dwi=$nest
+            fi
             crlbvals="${NHDR}/${base}/bvals"
             crlbvecs="${NHDR}/${base}/bvecs"
-            crl4D="${NHDR}/${base}/dwi4D.nii.gz"
+            crl4D="${NHDR}/${base}/${base}.nii.gz"
             echo "Creating CRL NHDR to extract standardized bvecs"
             mkdir -pv $NHDR/${base}
             crlDICOMConverter -d ${dcm} -p ${NHDR}/${base}/vol 
             crlDWIConvertNHDRForFSL -i ${NHDR}/${base}/vol*diffusion*nhdr --data ${crl4D} --bvecs ${crlbvecs} --bvals ${crlbvals} --automirrorx 0
         fi
 
-        # FSL SPLIT and copy to volumes folder
-        if [[ $useCRL -eq 1 && $onlyNHDR -ne 1 ]] ; then
-            echo "Split 4D to 3D: CRL converted volumes"
+        # If MRTRIX option is set, we also convert using MRCONVERT
+        if [[ $useMRTRIX -eq 1 ]] ; then
+            mrbvals="${MRTRIX}/${base}/bvals"
+            mrbvecs="${MRTRIX}/${base}/bvecs"
+            crl4D="${MRTRIX}/${base}/${base}.nii.gz"
+            echo "Creating mrtrix mrconvert to extract standardized bvecs"
+            mkdir -pv $MRTRIX/${base}
+            mrconvert ${dcm} ${MRTRIX}/${base}/${base}.nii.gz -export_grad_fsl ${mrbvecs} ${mrbvals}
+        fi
+
+        # FSL SPLIT and copy to volumes folder, using the selected converted data (dcm2niix, mrconvert, or crl)
+        if [[ $useMRTRIX -eq 1 && $noOver -ne 1 ]] ; then
+            echo "Split 4D to 3D: mrconvert volumes"
+            mkdir ${out3D}
             fslsplit ${crl4D} ${out3D}/vol_ -t
-        else echo "Split 4D to 3D: dcm2niix converted volumes" 
+            echo "Copy gradient info and slice timing to volumes/"
+            cp ${mrbvals} ${mrbvecs} ${sliceT} -v ${out3D}
+        elif [[ $useCRL -eq 1 && $noOver -ne 1 ]] ; then
+            echo "Split 4D to 3D: CRL converted volumes"
+            mkdir ${out3D}
+            fslsplit ${crl4D} ${out3D}/vol_ -t
+            echo "Copy gradient info and slice timing to volumes/"
+            cp ${crlbvals} ${crlbvecs} ${sliceT} -v ${out3D}
+        elif [[ $useDCM -eq 1 && $noOver -ne 1 ]] ; then
+            echo "Split 4D to 3D: dcm2niix converted volumes" 
+            mkdir ${out3D}
             fslsplit ${nifti} ${out3D}/vol_ -t
+            echo "Copy gradient info and slice timing to volumes/"
+            cp ${bvals} ${bvecs} ${sliceT} -v ${out3D} 
+        else
+            echo "--noOver was set, not overwriting volumes/ folder"
         fi
         echo
 
-        # Copy bvals, bvecs, and sliceTiming.txt to the recon directory
-        echo "Copy gradient info and slice timing to reconstruction directory"
-        if [[ $useCRL -eq 1 && $onlyNHDR -ne 1 ]] ; then
-            echo "Use CRL bvals and bvecs"
-            cp ${crlbvals} ${crlbvecs} ${sliceT} -v ${out3D}
-        else echo "Use dcm2niix bvals/bvecs"
-            cp ${bvals} ${bvecs} ${sliceT} -v ${out3D} 
-        fi
-        
-        echo
     fi
 done

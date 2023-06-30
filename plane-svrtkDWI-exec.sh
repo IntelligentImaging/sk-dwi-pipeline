@@ -8,8 +8,6 @@ cat << EOF
     Supply a dwi directory (the one named with the subject id and has folders like 'volumes', 'svrtk', and 'b0b1')
     run-svrtk.sh will be found in svrtk/b0 and svrtk/b1 - both b0 and b1 recons will be run
     Creates a detached SVRTK docker image, and then uses it to execute the run script, then deletes the container
-    -nob0       Skips b0 recon
-    -nob1       Skips b1 recon
 EOF
 }
 
@@ -52,14 +50,13 @@ mpath=`readlink -f $1`
 
 # Validate argument
 if [[ ! -d $mpath ]] ; then
-    die "error: $mpath is not a directory"
+    echo error: $mpath is not a directory
+    exit 1
 fi
-if [[ ! -d ${mpath}/svrtk ]] ; then
-    die 'error: svrtk folder not found'
-fi
-runs=`find $mpath/svrtk -name run-svrtk.sh`
+runs=`find $mpath/plane-svrtkDWI -name run-svrtk.sh`
 if [[ ! -n $runs ]] ; then
-    die "error: run-svrtk.sh not found in the subj/svrtk/b0 or b1 directories"
+    echo error: run-svrtk.sh not found in the subj/plane-svrtkDWI/recon directories
+    exit 1
 fi
 
 # Path to mount inside container
@@ -72,22 +69,15 @@ echo "Mount path within container: $conpath"
 echo "Initializing SVRTK Docker container"
 docker run -id --name $dockname --rm --mount type=bind,source=${mpath},target=${conpath} fetalsvrtk/svrtk /bin/bash
 echo
-if [[ $nob0 -ne 1 ]] ; then
-    echo "Executing b0 SVRTK recon within container"
+for svr in $runs ; do
+    echo "Executing SVRTK recon within container: $svr"
+    rest=`echo $svr | sed -e 's,.*plane-svrtkDWI,plane-svrtkDWI,g'`
     date
-    docker exec -t -i -w /home/data $dockname sh -c "sh svrtk/b0/run-svrtk.sh"
+    docker exec -t -i -w /home/data $dockname sh -c "sh ${rest}"
     echo
-    echo "B0 recon done"
-else echo "--nob0 is set, skipping b0 reconstruction"
-fi
-if [[ $nob1 -ne 1 ]] ; then
-    echo "Executing b1 SVRTK recon within container"
-    date
-    docker exec -t -i -w /home/data $dockname sh -c "sh svrtk/b1/run-svrtk.sh"
+    echo "Run script done"
     echo
-    echo "B1 recon done"
-else echo "--nob1 is set, skipping b1 reconstruction":
-fi
+done
 echo "Stopping docker image"
 docker stop $dockname
 echo

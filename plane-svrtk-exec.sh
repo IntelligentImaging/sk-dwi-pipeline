@@ -53,9 +53,9 @@ if [[ ! -d $mpath ]] ; then
     echo error: $mpath is not a directory
     exit 1
 fi
-runs=`find $mpath/s-svrtk -name run-svrtk.sh`
+runs=`find $mpath/plane-svrtk -name run-svrtk.sh`
 if [[ ! -n $runs ]] ; then
-    echo error: run-svrtk.sh not found in the subj/s-svrtk/b0 or b1 directories
+    echo error: run-svrtk.sh not found in the subj/plne-svrtk/b0 or b1 directories
     exit 1
 fi
 
@@ -71,7 +71,7 @@ docker run -id --name $dockname --rm --mount type=bind,source=${mpath},target=${
 echo
 for svr in $runs ; do
     echo "Executing SVRTK recon within container: $svr"
-    rest=`echo $svr | sed -e 's,.*s-svrtk,s-svrtk,g'`
+    rest=`echo $svr | sed -e 's,.*plane-svrtk,plane-svrtk,g'`
     date
     docker exec -t -i -w /home/data $dockname sh -c "sh ${rest}"
     echo

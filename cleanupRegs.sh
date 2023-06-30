@@ -17,11 +17,11 @@ fi
 
 base=`basename $best .nii.gz`
 dir=`dirname $best`
-casedir=`dirname $dir`
-id=`basename $casedir`
 
 b=`echo $base | sed 's,.*_\(b[0-1]\)_.*,\1,g'` # grab whether it was b0 or b1
 met=`echo $base | sed 's,.*_\(.*\),\1,g'` # grab registration metric
+id=`echo $base | sed 's,t2_b[0-1]_\(.*\)_.*,\1,g'` # grab subject ID 
+
 toT2="${b}-t2_${id}_${met}.tfm"
 toAtlas="${b}-atlas_${id}_${met}.tfm"
 if [[ ! -f $toT2 || ! -f $toAtlas ]] ; then

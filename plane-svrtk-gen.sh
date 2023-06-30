@@ -4,8 +4,43 @@ show_help () {
 cat << EOF
     USAGE: sh ${0##*/} [subj DWI directory] [mask for recon]
     Incorrect argument supplied
+
+            This script sets up SVRTK recon scripts for our diffusion data. Each plane
+            and each bvalue will be processed separately. By default, this script will
+            ask you specify the plane for each input DWI and store it in each volume
+            folder using a text file named plane.txt, which either reads "ax", "cor",
+            or "sag". If this file exists, the script will not ask you again. 
+
+    -p      Force the script to ask for image plane and overwrite existing plane.txt.
 EOF
 }
+
+die() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+
+while :; do
+    case $1 in
+        -h|-\?|--help)
+            show_help # help message
+            exit
+            ;;
+        -p|--plane)
+            let overplane=1
+            ;;
+        --) # end of optionals
+            shift
+            break
+            ;;
+        -)?*
+            printf 'warning: unknown option (ignored: %s\m' "$1" >&2
+            ;;
+        *) # default case, no optionals
+            break
+    esac
+    shift
+done
 
 if [ $# -ne 2 ]; then
     show_help
@@ -22,8 +57,8 @@ cp $mask -v ${subj}/${svrmask}
 vols="${svrtk}/vols"
 
 # record plane for each series
-for dwi in ${subj}/volumes/* ; do
-    if [[ -d $dwi ]] ; then 
+for dwi in ${subj}/nhdr/* ; do
+    if [[ -d $dwi && ( ! -f ${dwi}/plane.txt || $overplane -eq 1 ) ]] ; then 
         echo "${dwi}: ax, cor, or sag?"
         read plane
         if [[ ! $plane == "ax" && ! $plane == "cor" && ! $plane == "sag" ]] ; then
