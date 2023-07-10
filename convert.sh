@@ -54,13 +54,13 @@ while :; do
         --dcm2niix)
             let useDCM=1
             ;;
-        --mrtrix)
+        --mrtrix|mrconvert)
             let useMRTRIX=1
             ;;
         --crl)
             let useCRL=1
             ;;
-        --noOver)
+        --noOver|no)
             let noOver=1
             ;;
         -s|--string)

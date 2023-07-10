@@ -83,8 +83,8 @@ done
 echo "--output /home/data/b0b1/tmpB1/b1.nii.gz \\" >> $runb1
 echo "--referenceVolume /home/data/volumes/$basecrop \\" >> $runb1
 echo "--resolution=0.75 \\" >> $runb1
-echo "--useGPUReg \\" >> $runb1
-echo "--iterations=2 \\" >> $runb1
+# echo "--useGPUReg \\" >> $runb1
+# echo "--iterations=2 \\" >> $runb1
 echo "--mask /home/data/volumes/mask_crop.nii.gz" >> $runb1
 echo "cd /home/data" >> $runb1
 
