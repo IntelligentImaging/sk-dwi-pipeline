@@ -72,9 +72,9 @@ src="${subj}/b0b1/dwi_b${whichb}_${id}.nii.gz"
 atlas_t2="${subj}/t2/atlas_t2final_${id}.nii.gz"
 cp $atlas_t2 -vu ${input}/
 
-# This section is going to make three arrays for each of the 4D DWI images:
-# name of the image, gradients file for the image
-# That way we can group each recon by bvalue and direction
+# This section is going to make two arrays for each of the 4D DWI images:
+# name of the image and gradients file for the image
+# That way we can group each recon by bvalue
 echo "Record images for each dir/bval step"
 declare -a dwi_ar
 declare -a grad_ar
