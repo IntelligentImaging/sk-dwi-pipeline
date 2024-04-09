@@ -73,7 +73,7 @@ fi
 echo "ID is $ID"
 
 # Set full paths
-C3D="/fileserver/fetal/bin/c3d_affine_tool"
+C3D="${FETALBIN}/c3d_affine_tool"
 FIXMAT="${FETALDTI}/changeTFMnameInFileToAffine.py"
 REGDIR=`dirname $TFM`
 NIIDIR=`dirname $REGDIR`

@@ -60,8 +60,8 @@ if [[ $# -ne 1 ]] ; then
     die
 fi
 NII=`readlink -f $1`
-if [[ ! $NII == *"nii"*  && -d $NII ]] ; then
-    NII=`find $NII -type d -name nii`
+if [[ ! $NII == *"nii"* && ! $NII == svrtk && -d $NII ]] ; then
+    NII=`find $NII -type d -name nii -o -name svrtk`
 fi
 echo "Input T2 recon directory: $NII"
 if [[ ! -d ${NII} ]] ; then
@@ -80,11 +80,12 @@ DIR=`dirname ${NII}`
 if [[ ! -n $CASEID ]] ; then CASEID=`basename ${DIR}` ; fi
 RDIR="${NII}/registration"
 # Find oriented T2 recon
-T2=`find ${RDIR} -maxdepth 1 -iname nxb\*z`
+T2=`find ${RDIR} -maxdepth 1 -iname nxb\*z | sort | head -n1`
 if [[ ! -f $T2 ]] ; then
     echo "error: T2 recon (registration/nxb*z) not found"
     exit 1
 fi
+
 # Find oriented T2 recon mask
 MASK=`find ${RDIR} -maxdepth 1 -name mask_\*_registration\*`
 NMASKS=`echo $MASK | wc -w`
