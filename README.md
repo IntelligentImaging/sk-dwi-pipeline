@@ -6,6 +6,7 @@ Dependencies
 - CRKIT
 - dcm2niix
 - python3 (nibabel) and docker for running Davood's Color FA code
+- Boost 1.58
 - gsl
 - cuda8.0
 - fsl (for fslsplit)
@@ -21,6 +22,8 @@ Installation
   5. Add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/fileserver/fetal/software/boost_1_58_0_sk/stage/lib` to your.bashrc
   6. You might need to do this: `sudo apt install libgsl27 ; sudo ln /usr/lib/x86_64-linux-gnu/libgsl.so.27 /usr/lib/x86_64-linux-gnu/libgsl.so.0`
   7. You might need to do this: `sudo apt install libtbb12 ; sudo ln /usr/lib/x86_64-linux-gnu/libtbb.so.12 /usr/lib/x86_64-linux-gnu/libtbb.so.2`
+  8. You might need to do this: `sudo apt install cudart12 ; sudo ln /usr/lib/x86_64-linux-gnu/libcudart.so.12 /usr/lib/x86_64-linux-gnu/libcudart.so.8.0`
+  9. You might need to do this (FSL has boost): `sudo ln /home/ch162835/fsl/lib/libboost_program_options.so  /home/ch162835/fsl/lib/libboost_program_options.so.1.58.0`
 
 The general workflow is:
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`
