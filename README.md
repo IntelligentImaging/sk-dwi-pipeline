@@ -20,6 +20,7 @@ Installation
   4. Add `export BOOST_ROOT=/fileserver/fetal/software/boost_1_58_0_sk` to your .bashrc
   5. Add `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/fileserver/fetal/software/boost_1_58_0_sk/stage/lib` to your.bashrc
   6. You might need to do this: `sudo apt install libgsl27 ; sudo ln /usr/lib/x86_64-linux-gnu/libgsl.so.27 /usr/lib/x86_64-linux-gnu/libgsl.so.0`
+  7. You might need to do this: `sudo apt install libtbb12 ; sudo ln /usr/lib/x86_64-linux-gnu/libtbb.so.12 /usr/lib/x86_64-linux-gnu/libtbb.so.2`
 
 The general workflow is:
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`
