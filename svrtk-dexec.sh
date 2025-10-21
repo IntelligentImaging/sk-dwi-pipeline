@@ -49,6 +49,7 @@ fi
 
 # Server directory to be mounted
 mpath=`readlink -f $1`
+id=`basename $mpath`
 
 # Validate argument
 if [[ ! -d $mpath ]] ; then
@@ -91,3 +92,13 @@ fi
 echo "Stopping docker image"
 docker stop $dockname
 echo
+
+if [[ ! -f ${mpath}/svrtk/b0/SVRTK-dwi_b0_${id}.nii.gz || ! -f ${mpath}/svrtk/b1/SVRTK-dwi_b1_${id}.nii.gz || ! -f ${mpath}/svrtk/b0/image0.nii.gz ]] ; then
+	echo "WARNING: At least one of b0_1, b0_2 or b1 were not generated. Check output"
+fi
+
+# Copy SVRTK recon outputs to b0b1 folder
+cp ${mpath}/svrtk/b0/SVRTK-dwi_b0_${id}.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}.nii.gz
+cp ${mpath}/svrtk/b0/image0.nii.gz -vup ${mpath}/b0b1_b0_${id}_tensor.nii.gz
+cp ${mpath}/svrtk/b1/SVRTK-dwi_b1_${id}.nii.gz -vup ${mpath}/b0b1/dwi_b1_${id}.nii.gz
+gzip -d ${mpath}/b0b1_b0_${id}_tensor.nii.gz # computeTensor binary needs this uncompressed
