@@ -105,11 +105,13 @@ output="atlas_tensor_${id}_${bpick}${mpick}"
 # Default dilation factor
 if [[ ! -n $DIL ]] ; then let DIL=4 ; fi
 
+date
 # Slice-to-Volume Registration (SVR) - dwi stacks to the reconstructed b0b1 images
 if [[ $noreg -eq 0 ]] ; then
     echo "${id}: Slice-to-Volume Registration"
     regSliceToVolume --fixed $b0 --b1Image $b1 --dir $volumes -j 2 -m 1 -r 5 -x 2.0 -y 1 -z -1
     echo SVR done
+    date
 
     # Rename stack transforms for tensor executable
     # We use b0_1 and b1 for SVR, but b0_2 for computeTensor, so we need to rename the transforms
@@ -135,6 +137,7 @@ if [[ $noten -eq 0 ]] ; then
     # computeTensor also saves output to the same directory as the --dir argument so we move them to the dti folder
     mv -v ${volumes}/${output}* $dti/
     echo "Compute tensor complete"
+    date
 
     echo "${id}: Post-process"
     for ten in ${dti}/${output}*nrrd ; do
