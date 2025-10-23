@@ -81,18 +81,14 @@ for dwi in ${data}/* ; do
         split="${volumes}/${base}"
         mkdir -pv ${split}
 
-
         #fslsplit ${dwi}/*z ${split}/vol_ -t
         ndim=`mrinfo -size ${dwi}/${base}.nii.gz | cut -d' ' -f4`
         let count=0
         while [[ $count -lt $ndim ]] ; do
             count4=$(printf "%04d" $count)
-            mrconvert ${dwi}/${base}.nii.gz -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz
+            mrconvert -force -quiet ${dwi}/${base}.nii.gz -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz
             ((count++))
         done
-     
-
-
 
         cp ${dwi}/bvals ${dwi}/bvecs ${subj}/dcm2niix/${base}/sliceTiming.txt -vp ${split}/
 
@@ -109,7 +105,8 @@ for dwi in ${data}/* ; do
 			echo ${split}/vol_${lead}.nii.gz >> ${b1list}
 		    fi
 	    	else
-		    echo "Input vol limit has been reached $x >= $LIMIT" 	
+		    echo "Input vol limit has been reached $x >= $LIMIT"
+            break	
 		fi
             ((x++)) # increase index by one
         done
