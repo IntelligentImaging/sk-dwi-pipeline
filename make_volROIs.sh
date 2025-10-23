@@ -29,6 +29,8 @@ for vol in $niis/* ; do
 		#cp ${vol}/vol_0000.nii.gz -vup ${dmri3d}/${base}
 
 		singularity exec docker://arfentul/dmri3d /bin/bash -c "python /src/dMRI_volume_segmentation.py ${dmri3d}/${base} /src/ gpu_num=0 dilation_radius=-1"
+
+		crlBinaryMorphology ${dmri3d}/${base}/vol_0000_mask.nii.gz dilate 1 5 ${dmri3d}/${base}/vol_0000_dmask.nii.gz
 	fi
 done
 
