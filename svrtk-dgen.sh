@@ -137,7 +137,7 @@ done
 echo "-mask $svrmask \\" >> $runb1
 echo "-svr_only \\" >> $runb1
 echo "-resolution 0.75 \\" >> $runb1
-echo "-iterations 3" >> $runb1
+echo "-iterations 2" >> $runb1
 
 echo Wrote run scripts:
 echo $runb0

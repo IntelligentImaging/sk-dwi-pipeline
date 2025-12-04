@@ -84,7 +84,7 @@ MTENSOR="${OUT}/m-atlas_tensor_${ID}-${METRIC}.nii.gz"
 # Crop
 echo "Crop tensor"
 #cmd="crlMaskImage2 -i $TENSOR -m $MASK -o $MTENSOR"
-cmd="fslmaths $TENSOR -mult $MASK $MTENSOR"
+cmd="fslmaths $TENSOR -mul $MASK $MTENSOR"
 echo $cmd >> $RUN
 $cmd
 

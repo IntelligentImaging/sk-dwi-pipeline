@@ -54,6 +54,7 @@ fi
 # Server directory to be mounted
 mpath=`readlink -f $1`
 id=`basename $mpath`
+echo "Working dir: $mpath"
 
 # Validate argument
 if [[ ! -d $mpath ]] ; then
@@ -119,7 +120,7 @@ if [[ ! -f ${mpath}/svrtk/b0/SVRTK-dwi_b0_${id}.nii.gz || ! -f ${mpath}/svrtk/b1
 fi
 
 # Copy SVRTK recon outputs to b0b1 folder
-cp ${mpath}/svrtk/b0/SVRTK-dwi_b0_${id}.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}.nii.gz
-cp ${mpath}/svrtk/b0/image0.nii.gz -vup ${mpath}/b0b1/b0_${id}_tensor.nii.gz
-cp ${mpath}/svrtk/b1/SVRTK-dwi_b1_${id}.nii.gz -vup ${mpath}/b0b1/dwi_b1_${id}.nii.gz
-gzip -d -f ${mpath}/b0b1/b0_${id}_tensor.nii.gz # computeTensor binary needs this uncompressed
+cp ${mpath}/svrtk/b0/image1.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}.nii.gz
+cp ${mpath}/svrtk/b0/image1.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}_tensor.nii.gz
+cp ${mpath}/svrtk/b1/image1.nii.gz -vup ${mpath}/b0b1/dwi_b1_${id}.nii.gz
+gzip -d -f ${mpath}/b0b1/dwi_b0_${id}_tensor.nii.gz # computeTensor binary needs this uncompressed
