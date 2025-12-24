@@ -73,28 +73,30 @@ if [[ -f $runb1 ]] ; then rm $runb1 ; fi
 if [[ -f $b0list ]] ; then rm $b0list ; fi
 if [[ -f $b1list ]] ; then rm $b1list ; fi
 
-# volumes/ has the 3D split dwi volumes in separate folders for each scan
-for dwi in ${data}/* ; do
-    if [[ -d $dwi ]] ; then 
-        base=`basename $dwi`
+# Find and split the FSL format nifti
+for dwi in ${data}/*/*.nii.gz ; do
+    if [[ -f $dwi ]] ; then 
+        base=`basename $dwi .nii.gz`
+	dwidir=`dirname $dwi`
+
         echo "Split DWI from 4D series to 3D volumes"
         split="${volumes}/${base}"
         mkdir -pv ${split}
 
         #fslsplit ${dwi}/*z ${split}/vol_ -t
-        ndim=`mrinfo -size ${dwi}/${base}.nii.gz | cut -d' ' -f4`
+        ndim=`mrinfo -size ${dwi} | cut -d' ' -f4`
         let count=0
         while [[ $count -lt $ndim ]] ; do
             count4=$(printf "%04d" $count)
-            mrconvert -force -quiet ${dwi}/${base}.nii.gz -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz
+            mrconvert -force -quiet ${dwi} -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz
             ((count++))
         done
 
-        cp ${dwi}/bvals ${dwi}/bvecs ${subj}/dcm2niix/${base}/sliceTiming.txt -vp ${split}/
+        cp ${dwidir}/bvals ${dwidir}/bvecs ${dwidir}/sliceTiming.txt -vp ${split}/
 
         let x=0 # this assumes the volumes are named/numbered vol_0000, vol_0001, etc
         # Read the bvals text file for bvalues
-        for b in `cat ${dwi}/bvals` ; do 
+        for b in `cat ${dwidir}/bvals` ; do 
 		if [[ $x -lt $LIMIT ]] ; then
 		    lead=$(printf "%04d" $x) # changes the index to have four leading 0's
 		    echo ${split}/vol_${lead}.nii.gz $b # this is the volume-bvalue combo

@@ -90,6 +90,52 @@ if [ $# -ne 1 ]; then
     exit
 fi 
 
+function slicetime_dcm {
+	
+	sliceT="$1"
+
+	timetag=`dcmdump +L +P "0019,1029" $ex` # should be DCM tag for slice timings
+	if [[ -n $timetag ]] ; then
+		echo "Found slice timings DICOM tag [0019,1029]"
+		echo "${timetag}" > $sliceT
+	else
+		echo "error: did not find slice timings from the usual dicom tag"
+	fi
+	}
+
+function slicetime_json {
+
+	json=`find ${out4D} -type f -name \*json | head -n1`
+	image="${out4D}/${base}.nii.gz"
+
+	# Find starting location of timing info
+	tim=`grep Timing $json -n | cut -d':' -f1`
+
+	# Add one to go to the next line
+	let lbeg=$tim+1
+	echo SliceTimings begin on line $lbeg of the json
+
+	# Count number of slices
+	z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+
+	# Number of times we will need to advance to next line
+	let slices=$z-1
+
+	# Get last line of Timings
+	lend=`echo ${lbeg} + ${slices} | bc`
+	echo Timings go from line $lbeg to $lend
+
+	# Extract lines
+	sing=`sed -ne "${lbeg},${lend}p" < $json`
+	final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
+	echo "Slice timings:"
+	echo $final
+	echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
+	# By hook or by crook, we should have the slice timings now
+	
+}
+
+
 idpath=`readlink -f $1`
 if [[ ! -d $idpath ]] ; then
     echo "Path does not exist"
@@ -100,7 +146,7 @@ id=`basename $idpath`
 DICOM="${idpath}/DICOM"
 NII="${idpath}/dcm2niix"
 VOLUMES="${idpath}/volumes"
-NHDR="${idpath}/nhdr"
+NHDR="${idpath}/nrrd"
 MRTRIX="${idpath}/mrconvert"
 
 if [[ $useCRL -ne 1 && $useMRTRIX -ne 1 && $useDCM -ne 1 ]] ; then
@@ -129,12 +175,15 @@ fi
 
 for dcm in ${allDCM} ; do
     if [[ -d $dcm ]] ; then
-        # INITIAL DCM2NIIX CONVERT, RENAME FILES, GENERATE SLICE TIMING
+	echo DICOM series: $dcm
+
+	ex=`find $dcm -type f | head -n1` # Example DICOM for tags
+
+        # Convert with dcm2niix
         # We also convert with dcm2niix because it gives us a backup if slicetiming wasn't pulled from dicom tags
-        echo "Converting $dcm"
         base=`basename $dcm`
         out4D="${NII}/${base}"
-        out3D="${VOLUMES}/${base}"
+        #out3D="${VOLUMES}/${base}"
         mkdir -pv ${out4D}
         dcm2niix -z y -f %s_%d -w 1 -o ${out4D} ${dcm}
         nifti=`find ${out4D} -type f -name \*.nii.gz`
@@ -143,68 +192,38 @@ for dcm in ${allDCM} ; do
             continue
         fi
 
-        nbase=`basename $nifti .nii.gz`
-        echo
+        #nbase=`basename $nifti .nii.gz`
+        #echo
         
-        echo "Rename bvals and bvecs"
-        bvals="${out4D}/bvals"
-        bvecs="${out4D}/bvecs"
-        mv -v ${out4D}/${nbase}.bval ${bvals}
-        mv -v ${out4D}/${nbase}.bvec ${bvecs}
-        echo "bvals = $bvals"
-        echo "bvecs = $bvecs"       
-        echo
+        #echo "Rename bvals and bvecs"
+        #bvals="${out4D}/bvals"
+        #bvecs="${out4D}/bvecs"
+        #mv -v ${out4D}/${nbase}.bval ${bvals}
+        #mv -v ${out4D}/${nbase}.bvec ${bvecs}
         
-        # |v| SLICE TIMING |v|
-        sliceT="${out4D}/sliceTiming.txt"
-        # DCMDUMP METHOD FOR GETTING SLICE TIMINGS #
-        ex=`find $dcm -type f | head -n1`
-        tagcheck=`dcmdump +L +P "0019,1029" $ex`
-        if [[ -n $tagcheck ]] ; then
-            echo "Found slice timings DICOM tag [0019,1029]"
-            dcmdump +L +P "0019,1029" $ex > $sliceT
-        # IF THAT DIDN'T WORK, WE LOOK AT THE JSON INSTEAD
-        else 
-            echo "Generate slice timing"
-            json=`find ${out4D} -type f -name \*json | head -n1`
-            image="${out4D}/${base}.nii.gz"
-            # Find starting location of timing info
-            tim=`grep Timing $json -n | cut -d':' -f1`
-            # Add one to go to the next line
-            let lbeg=$tim+1
-            echo SliceTimings begin on line $lbeg of the json
-            # Count number of slices
-            z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
-            # Number of times we will need to advance to next line
-            let slices=$z-1
-            # Get last line of Timings
-            lend=`echo ${lbeg} + ${slices} | bc`
-            echo Timings go from line $lbeg to $lend
-            # Extract lines
-            sing=`sed -ne "${lbeg},${lend}p" < $json`
-            final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
-            echo "Slice timings:"
-            echo $final
-            echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
-        fi 
-        # By hook or by crook, we should have the slice timings now
-        echo "Slice timing file: $sliceT"
-        echo
 
-        # If CRL option is set, we also convert using CRL tools
+
+
+	# Get series number
+	SerNumFull=`dcmdump +L +P "0020,0011" $ex`
+	SerNum=`echo $SerNumFull | sed -e 's,.*\[,,g' -e 's,\].*,,g'`
+	SerDscFull=`dcmdump +L +P "0008,103e" $ex`
+	SerDsc=`echo $SerDscFull | sed -e 's,.*\[,,g' -e 's,\].*,,g'`
+	#odir="${NHDR}/${SerNum}_${SerDsc}"
+	odir="${NHDR}/run_${SerNum}"
+
+        # If CRL option is set, convert with CRL tools
         if [[ $useCRL -eq 1 ]] ; then
-            # Nested folders don't work here, need to re-assign input
-            nest=`find $dwi -mindepth 1 -type d`
-            if [[ -n $nest ]] ; then
-                dwi=$nest
-            fi
-            crlbvals="${NHDR}/${base}/bvals"
-            crlbvecs="${NHDR}/${base}/bvecs"
-            crl4D="${NHDR}/${base}/${base}.nii.gz"
-            echo "Creating CRL NHDR to extract standardized bvecs"
-            mkdir -pv $NHDR/${base}
-            crlDICOMConverter -d ${dcm} -p ${NHDR}/${base}/vol 
-            crlDWIConvertNHDRForFSL -i ${NHDR}/${base}/vol*diffusion*nhdr --data ${crl4D} --bvecs ${crlbvecs} --bvals ${crlbvals} --automirrorx 0
+            crlbvals="${odir}/bvals"
+            crlbvecs="${odir}/bvecs"
+            crl4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
+            mkdir -pv ${odir}
+	    convDCM="crlDICOMConverter -d ${dcm} -p ${odir}/vol"
+	    convHDR="crlDWIConvertNHDRForFSL -i ${odir}/vol*diffusion*nhdr --data ${crl4D} --bvecs ${crlbvecs} --bvals ${crlbvals} --automirrorx 0"
+            singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convDCM}"
+            singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convHDR}"
+
+	    slicetime_dcm ${odir}/sliceTiming.txt
         fi
 
         # If MRTRIX option is set, we also convert using MRCONVERT
@@ -216,30 +235,6 @@ for dcm in ${allDCM} ; do
             mkdir -pv $MRTRIX/${base}
             mrconvert ${dcm} ${MRTRIX}/${base}/${base}.nii.gz -export_grad_fsl ${mrbvecs} ${mrbvals}
         fi
-
-        # FSL SPLIT and copy to volumes folder, using the selected converted data (dcm2niix, mrconvert, or crl)
-        if [[ $useMRTRIX -eq 1 && $noOver -ne 1 ]] ; then
-            echo "Split 4D to 3D: mrconvert volumes"
-            mkdir ${out3D}
-            fslsplit ${crl4D} ${out3D}/vol_ -t
-            echo "Copy gradient info and slice timing to volumes/"
-            cp ${mrbvals} ${mrbvecs} ${sliceT} -v ${out3D}
-        elif [[ $useCRL -eq 1 && $noOver -ne 1 ]] ; then
-            echo "Split 4D to 3D: CRL converted volumes"
-            mkdir ${out3D}
-            fslsplit ${crl4D} ${out3D}/vol_ -t
-            echo "Copy gradient info and slice timing to volumes/"
-            cp ${crlbvals} ${crlbvecs} ${sliceT} -v ${out3D}
-        elif [[ $useDCM -eq 1 && $noOver -ne 1 ]] ; then
-            echo "Split 4D to 3D: dcm2niix converted volumes" 
-            mkdir ${out3D}
-            fslsplit ${nifti} ${out3D}/vol_ -t
-            echo "Copy gradient info and slice timing to volumes/"
-            cp ${bvals} ${bvecs} ${sliceT} -v ${out3D} 
-        else
-            echo "--noOver was set, not overwriting volumes/ folder"
-        fi
-        echo
 
     fi
 done
