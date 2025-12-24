@@ -176,33 +176,7 @@ fi
 for dcm in ${allDCM} ; do
     if [[ -d $dcm ]] ; then
 	echo DICOM series: $dcm
-
 	ex=`find $dcm -type f | head -n1` # Example DICOM for tags
-
-        # Convert with dcm2niix
-        # We also convert with dcm2niix because it gives us a backup if slicetiming wasn't pulled from dicom tags
-        base=`basename $dcm`
-        out4D="${NII}/${base}"
-        #out3D="${VOLUMES}/${base}"
-        mkdir -pv ${out4D}
-        dcm2niix -z y -f %s_%d -w 1 -o ${out4D} ${dcm}
-        nifti=`find ${out4D} -type f -name \*.nii.gz`
-        if [[ ! -f $nifti ]] ; then
-            echo "Conversion didn't run for some reason. Trying next image."
-            continue
-        fi
-
-        #nbase=`basename $nifti .nii.gz`
-        #echo
-        
-        #echo "Rename bvals and bvecs"
-        #bvals="${out4D}/bvals"
-        #bvecs="${out4D}/bvecs"
-        #mv -v ${out4D}/${nbase}.bval ${bvals}
-        #mv -v ${out4D}/${nbase}.bvec ${bvecs}
-        
-
-
 
 	# Get series number
 	SerNumFull=`dcmdump +L +P "0020,0011" $ex`
@@ -211,6 +185,34 @@ for dcm in ${allDCM} ; do
 	SerDsc=`echo $SerDscFull | sed -e 's,.*\[,,g' -e 's,\].*,,g'`
 	#odir="${NHDR}/${SerNum}_${SerDsc}"
 	odir="${NHDR}/run_${SerNum}"
+
+
+        # Convert with dcm2niix
+	if [[ $useDCM = 1 ]] ; then  
+        # We can convert with dcm2niix because it gives us a backup if slicetiming wasn't pulled from dicom tags
+	# Though if dcm2niix is finding slice timing, it must be somewhere in the tags...
+	
+		base=`basename $dcm`
+		out4D="${NII}/${base}"
+		#out3D="${VOLUMES}/${base}"
+		mkdir -pv ${out4D}
+		dcm2niix -z y -f %s_%d -w 1 -o ${out4D} ${dcm}
+		nifti=`find ${out4D} -type f -name \*.nii.gz`
+		if [[ ! -f $nifti ]] ; then
+		    echo "Conversion didn't run for some reason. Trying next image."
+		    continue
+		fi
+
+		#nbase=`basename $nifti .nii.gz`
+		#echo
+		
+		#echo "Rename bvals and bvecs"
+		#bvals="${out4D}/bvals"
+		#bvecs="${out4D}/bvecs"
+		#mv -v ${out4D}/${nbase}.bval ${bvals}
+		#mv -v ${out4D}/${nbase}.bvec ${bvecs}
+	fi	
+
 
         # If CRL option is set, convert with CRL tools
         if [[ $useCRL -eq 1 ]] ; then
