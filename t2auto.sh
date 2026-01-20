@@ -123,7 +123,7 @@ echo "Transform (T2->Atlas): $TFM"
 # "Run" script
 SCRIPT="${NII}/run-createT2Atlas.sh"
 # Copy process script to case dir and run command
-cmd="sh $T2sh $T2 $MASK $REG $TFM"
+cmd="bash $T2sh $T2 $MASK $REG $TFM"
 echo $cmd > $SCRIPT
 $cmd
 # Check output and copy to diffusion dir
