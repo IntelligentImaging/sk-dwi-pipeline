@@ -103,32 +103,37 @@ function slicetime_dcm {
 function slicetime_json {
 
 	json=`find ${odir} -type f -name \*json | head -n1`
-	image="${vol4D}"
+    if [[ -f $json ]] ; then
+    	image="${vol4D}"
 
-	# Find starting location of timing info
-	tim=`grep SliceTiming $json -n | cut -d':' -f1`
+    	# Find starting location of timing info
+    	tim=`grep SliceTiming $json -n | cut -d':' -f1`
 
-	# Add one to go to the next line
-	let lbeg=$tim+1
-	echo SliceTimings begin on line $lbeg of the json
+    	# Add one to go to the next line
+    	let lbeg=$tim+1
+    	echo SliceTimings begin on line $lbeg of the json
 
-	# Count number of slices
-	z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+    	# Count number of slices
+    	z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
 
-	# Number of times we will need to advance to next line
-	let slices=$z-1
+    	# Number of times we will need to advance to next line
+    	let slices=$z-1
 
-	# Get last line of Timings
-	lend=`echo ${lbeg} + ${slices} | bc`
-	echo Timings go from line $lbeg to $lend
+    	# Get last line of Timings
+    	lend=`echo ${lbeg} + ${slices} | bc`
+    	echo Timings go from line $lbeg to $lend
 
-	# Extract lines
-	sing=`sed -ne "${lbeg},${lend}p" < $json`
-	final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
-	echo "Slice timings:"
-	echo $final
-	echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
-	# By hook or by crook, we should have the slice timings now
+    	# Extract lines
+    	sing=`sed -ne "${lbeg},${lend}p" < $json`
+    	final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
+    	echo "Slice timings:"
+    	echo $final
+    	echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
+    	# By hook or by crook, we should have the slice timings now
+
+    else
+        echo "No JSON found"
+    fi
 	
 }
 
@@ -172,6 +177,13 @@ fi
 for dcm in ${allDCM} ; do
     if [[ -d $dcm ]] ; then
 	echo DICOM series: $dcm
+    
+    wc=`find $dcm -type f | wc -w`
+    if [[ $wc -lt 10 ]] ; then
+        echo "Not many files in $dcm, this might be an aborted series. Skipping."
+        continue
+    fi
+
 	ex=`find $dcm -type f | head -n1` # Example DICOM for tags
 
 	# Get series number
