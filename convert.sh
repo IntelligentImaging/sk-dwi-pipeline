@@ -19,8 +19,6 @@ cat << EOF
         --crl       Use crlDICOMConverter for DICOM->NHDR and
                     crlDWIConvertNHDRForFSL for bvecs/bvals
 
-        --dcm2niix  Use dcm2niix to convert DICOM->.nii.gz and get bvals/bvecs
-
         --noOver    Do not overwrite files already in volumes/ 
             
         -d      Supply the raw data directory to convert. This script will set up symbolic links to the data. 
@@ -50,9 +48,6 @@ while :; do
             else
                 die 'error: "-d" requires a DICOM directory'
             fi
-            ;;
-        --dcm2niix)
-            let useDCM=1
             ;;
         --mrtrix|mrconvert)
             let useMRTRIX=1
@@ -95,28 +90,30 @@ function slicetime_dcm {
 	sliceT="$1"
 
 	timetag=`dcmdump +L +P "0019,1029" $ex` # should be DCM tag for slice timings
+    let time_error=0
 	if [[ -n $timetag ]] ; then
 		echo "Found slice timings DICOM tag [0019,1029]"
 		echo "${timetag}" > $sliceT
 	else
 		echo "error: did not find slice timings from the usual dicom tag"
+        let time_error=1 # this tells us the DICOM tag method failed
 	fi
 	}
 
 function slicetime_json {
 
-	json=`find ${out4D} -type f -name \*json | head -n1`
-	image="${out4D}/${base}.nii.gz"
+	json=`find ${odir} -type f -name \*json | head -n1`
+	image="${vol4D}"
 
 	# Find starting location of timing info
-	tim=`grep Timing $json -n | cut -d':' -f1`
+	tim=`grep SliceTiming $json -n | cut -d':' -f1`
 
 	# Add one to go to the next line
 	let lbeg=$tim+1
 	echo SliceTimings begin on line $lbeg of the json
 
 	# Count number of slices
-	z=`crlImageStats ${nifti} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+	z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
 
 	# Number of times we will need to advance to next line
 	let slices=$z-1
@@ -144,7 +141,6 @@ fi
 
 id=`basename $idpath`
 DICOM="${idpath}/DICOM"
-NII="${idpath}/dcm2niix"
 VOLUMES="${idpath}/volumes"
 NHDR="${idpath}/nrrd"
 MRTRIX="${idpath}/mrconvert"
@@ -182,46 +178,17 @@ for dcm in ${allDCM} ; do
 	SerNumFull=`dcmdump +L +P "0020,0011" $ex`
 	SerNum=`echo $SerNumFull | sed -e 's,.*\[,,g' -e 's,\].*,,g'`
 	SerDscFull=`dcmdump +L +P "0008,103e" $ex`
-	SerDsc=`echo $SerDscFull | sed -e 's,.*\[,,g' -e 's,\].*,,g'`
-	#odir="${NHDR}/${SerNum}_${SerDsc}"
-	odir="${NHDR}/run_${SerNum}"
-
-
-        # Convert with dcm2niix
-	if [[ $useDCM = 1 ]] ; then  
-        # We can convert with dcm2niix because it gives us a backup if slicetiming wasn't pulled from dicom tags
-	# Though if dcm2niix is finding slice timing, it must be somewhere in the tags...
-	
-		base=`basename $dcm`
-		out4D="${NII}/${base}"
-		#out3D="${VOLUMES}/${base}"
-		mkdir -pv ${out4D}
-		dcm2niix -z y -f %s_%d -w 1 -o ${out4D} ${dcm}
-		nifti=`find ${out4D} -type f -name \*.nii.gz`
-		if [[ ! -f $nifti ]] ; then
-		    echo "Conversion didn't run for some reason. Trying next image."
-		    continue
-		fi
-
-		#nbase=`basename $nifti .nii.gz`
-		#echo
-		
-		#echo "Rename bvals and bvecs"
-		#bvals="${out4D}/bvals"
-		#bvecs="${out4D}/bvecs"
-		#mv -v ${out4D}/${nbase}.bval ${bvals}
-		#mv -v ${out4D}/${nbase}.bvec ${bvecs}
-	fi	
-
+	SerDsc=`echo $SerDscFull | sed -e 's,.*\[,,g' -e 's,\].*,,g' -e 's, ,_,g'`
 
         # If CRL option is set, convert with CRL tools
         if [[ $useCRL -eq 1 ]] ; then
-            crlbvals="${odir}/bvals"
-            crlbvecs="${odir}/bvecs"
-            crl4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
+            odir="${NHDR}/run_${SerNum}"
+            bvals="${odir}/bvals"
+            bvecs="${odir}/bvecs"
+            vol4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
             mkdir -pv ${odir}
 	    convDCM="crlDICOMConverter -d ${dcm} -p ${odir}/vol"
-	    convHDR="crlDWIConvertNHDRForFSL -i ${odir}/vol*diffusion*nhdr --data ${crl4D} --bvecs ${crlbvecs} --bvals ${crlbvals} --automirrorx 0"
+	    convHDR="crlDWIConvertNHDRForFSL -i ${odir}/vol*diffusion*nhdr --data ${vol4D} --bvecs ${bvecs} --bvals ${bvals} --automirrorx 0"
             singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convDCM}"
             singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convHDR}"
 
@@ -230,12 +197,18 @@ for dcm in ${allDCM} ; do
 
         # If MRTRIX option is set, we also convert using MRCONVERT
         if [[ $useMRTRIX -eq 1 ]] ; then
-            mrbvals="${MRTRIX}/${base}/bvals"
-            mrbvecs="${MRTRIX}/${base}/bvecs"
-            crl4D="${MRTRIX}/${base}/${base}.nii.gz"
+            odir="mrconvert/${SerNum}_${SerDsc}"
+            mkdir -pv ${odir}
+            bvals="${odir}/bvals"
+            bvecs="${odir}/bvecs"
+            vol4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
             echo "Creating mrtrix mrconvert to extract standardized bvecs"
-            mkdir -pv $MRTRIX/${base}
-            mrconvert ${dcm} ${MRTRIX}/${base}/${base}.nii.gz -export_grad_fsl ${mrbvecs} ${mrbvals}
+            mrconvert ${dcm} ${vol4D} -export_grad_fsl ${bvecs} ${bvals} -json_export "${odir}/${SerNum}_${SerDsc}.json" -force
+        fi
+
+        slicetime_dcm ${odir}/sliceTiming.txt
+        if [[ ${time_error}=1 ]] ; then
+            slicetime_json
         fi
 
     fi

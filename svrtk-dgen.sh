@@ -48,9 +48,15 @@ if [ $# -ne 2 ]; then
     exit
 fi 
 
-if [[ ! -n $LIMIT ]] ; then let $LIMIT=999 ; fi # default limit (aka no limit)
+if [[ ! -n $LIMIT ]] ; then let LIMIT=999 ; fi # default limit (aka no limit)
 
 data=`readlink -f $1`
+convertername=`basename $data`
+if [[ ! $convertername == mrconvert && ! $convertername == nhdr ]] ; then
+    echo "You may have failed to supply the converted directory path. Exiting."
+    exit
+fi
+
 subj=`dirname $data`
 id=`basename $subj`
 mask="$2"
