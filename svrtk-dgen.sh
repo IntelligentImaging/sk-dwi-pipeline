@@ -7,8 +7,9 @@ cat << EOF
     This script sorts volumes by bvalues before assigning volumes to be used for reconstruction.
     By default, the lowest b-value will be used first. 
 
-    -n N    Sets image limit for each volume folder. For example, "-n 6" for a subject with
-            three diffusion scans would mean only 18 total volumes are reconstructed.
+    -n N    Sets image limit for each series folder in initial b0b1 reconstructions.
+            For example, "-n 6" for a subject with three diffusion scans would mean 
+            a maximum of 18 total volumes are reconstructed for both B0 and B1.
 
     -m MASK Specifies ROI mask file; otherwise script will look in case directory for a
             file named mask_*.nii.gz. 
