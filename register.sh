@@ -20,7 +20,7 @@ atlas_mask="${CASEDIR}/t2/atlas_mask_${ID}.nii.gz"
 t2_t2="${CASEDIR}/t2/t2_t2_${ID}.nii.gz"
 t2_mask="${CASEDIR}/t2/t2_mask_${ID}.nii.gz"
 t2_dilmask="${CASEDIR}/t2/t2_mask_${ID}_dilated.nii.gz"
-tfm_t2atlas="${CASEDIR}/t2/t2-atlas_${ID}.tfm"
+tfm_t2atlas=`find ${CASEDIR}/t2 -maxdepth 1 -name t2-atlas_${ID}.tfm -o -name t2-atlas_${ID}.txt | sort | head -n1` 
 
 echo $ID
 # check for T2 files
@@ -60,7 +60,7 @@ function register {
     tfm_dwit2="${b0b1}/${b}-t2_${ID}_${mcode}.tfm"
     echo "Register DWI to t2: $b $mcode ($mask)"
     cmd="$cmd $t2_t2 ${b0b1}/dwi_${b}_${ID}.nii.gz ${b0b1}/t2_${b}_${ID}_${mcode}.nii.gz $tfm_dwit2 -t 2 -p 2 --metricName $metric"
-    $cmd
+    #$cmd
     tfm_dwiatlas="${b0b1}/${b}-atlas_${ID}_${mcode}.tfm"
     # Combines dwi->t2 and t2->atlas transforms to get a dwi->atlas transform
     echo "Compose transforms: $b $mcode ($mask)"

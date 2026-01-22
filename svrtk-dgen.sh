@@ -2,11 +2,16 @@
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [-n image limit per scan] -- [subj converted data dir] [mask for recon]
-    Incorrect argument supplied
+    USAGE: sh ${0##*/} [-n image limit per scan] [-m ROI mask] -- [subj converted data dir]
+    
+    This script sorts volumes by bvalues before assigning volumes to be used for reconstruction.
+    By default, the lowest b-value will be used first. 
 
-    -n		Sets image limit for each volume folder. For example, "-n 6" for a subject with
-		three diffusion scans would mean only 18 total volumes are reconstructed.
+    -n N    Sets image limit for each volume folder. For example, "-n 6" for a subject with
+            three diffusion scans would mean only 18 total volumes are reconstructed.
+
+    -m MASK Specifies ROI mask file; otherwise script will look in case directory for a
+            file named mask_*.nii.gz. 
 EOF
 }
 
@@ -28,6 +33,14 @@ while :; do
                 die 'error: -n argument should be a number of volumes to include from each series'
             fi
             ;;
+        -m)
+            if [[ -f $2 ]] ; then
+                mask=$2
+                shift
+            else
+                die 'error: mask not found'
+            fi
+            ;;
         --) # end of optionals
             shift
             break
@@ -42,8 +55,7 @@ while :; do
 done
 
 
-
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
     show_help
     exit
 fi 
@@ -59,9 +71,17 @@ fi
 
 subj=`dirname $data`
 id=`basename $subj`
-mask="$2"
 svrtk="svrtk"
 volumes="${subj}/volumes"
+
+# Look for a mask if one was not supplied
+if [[ ! -n $mask ]] ; then
+    mask=`find $subj -maxdepth 1 -type f -name mask_\*.nii.gz`
+    if [[ ! -n $mask ]] ; then
+        die "Could not find mask in $data"
+    fi
+fi
+
 mkdir -pv ${subj}/svrtk ${volumes}
 cp $mask -v ${subj}/${svrtk}/mask_svrtk.nii.gz
 svrmask="${svrtk}/mask_svrtk.nii.gz"
@@ -79,44 +99,70 @@ if [[ -f $runb1 ]] ; then rm $runb1 ; fi
 if [[ -f $b0list ]] ; then rm $b0list ; fi
 if [[ -f $b1list ]] ; then rm $b1list ; fi
 
-# Find and split the FSL format nifti
 for dwi in ${data}/*/*.nii.gz ; do
     if [[ -f $dwi ]] ; then 
         base=`basename $dwi .nii.gz`
-	dwidir=`dirname $dwi`
+	    dwidir=`dirname $dwi`
 
         echo "Split DWI from 4D series to 3D volumes"
         split="${volumes}/${base}"
         mkdir -pv ${split}
 
-        #fslsplit ${dwi}/*z ${split}/vol_ -t
         ndim=`mrinfo -size ${dwi} | cut -d' ' -f4`
         let count=0
         while [[ $count -lt $ndim ]] ; do
             count4=$(printf "%04d" $count)
-            mrconvert -force -quiet ${dwi} -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz
+            printf "\rvolume: ${count4}"
+            mrconvert -quiet ${dwi} -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz -force
             ((count++))
         done
+        echo
 
-        cp ${dwidir}/bvals ${dwidir}/bvecs ${dwidir}/sliceTiming.txt -vp ${split}/
+        cp ${dwidir}/bvals ${dwidir}/bvecs ${dwidir}/sliceTiming.txt -vup ${split}/
 
-        let x=0 # this assumes the volumes are named/numbered vol_0000, vol_0001, etc
-        # Read the bvals text file for bvalues
-        for b in `cat ${dwidir}/bvals` ; do 
-		if [[ $x -lt $LIMIT ]] ; then
-		    lead=$(printf "%04d" $x) # changes the index to have four leading 0's
-		    echo ${split}/vol_${lead}.nii.gz $b # this is the volume-bvalue combo
-		    # if 0, use for B0 recon, if greater than 0, use for B1 recon
-		    if [[ $b -eq 0 ]] ; then
-			echo ${split}/vol_${lead}.nii.gz >> ${b0list}
-		    elif [[ $b > 0 ]] ; then
-			echo ${split}/vol_${lead}.nii.gz >> ${b1list}
-		    fi
-	    	else
-		    echo "Input vol limit has been reached $x >= $LIMIT"
-            break	
-		fi
-            ((x++)) # increase index by one
+
+        # Make a sorted array with the bvalue-volume pairs
+        declare -a BVALS
+        let count=0
+        for b in `cat ${dwidir}/bvals` ; do
+            count4d=$(printf "%04d" $count)
+            BVALS[$count]="$b,$count4d"
+            ((count++))
+        done
+        IFS=$'\n' SORTED=($(sort <<<"${BVALS[*]}")); unset IFS
+
+        let count=0
+        let b0x=0 # this assumes the volumes are named/numbered vol_0000, vol_0001, etc
+        let b1x=0
+
+        # Read the array and put x of b0's and b1's for each recon according to the set limit
+        while [[ $b0x -lt $LIMIT || $b1x -lt $LIMIT ]] ; do
+            volbval=`echo ${SORTED[$count]} | cut -d',' -f1`
+            volnum=`echo ${SORTED[$count]} | cut -d',' -f2`
+
+            # if 0, use for B0 recon, if greater than 0, use for B1 recon
+            if [[ $volbval -eq 0 && $b0x -lt $LIMIT ]] ; then
+
+                echo ${base}/vol_${volnum}.nii.gz $volbval # this is the volume-bvalue combo
+                echo ${split}/vol_${volnum}.nii.gz >> ${b0list}
+                ((b0x++))
+
+            elif [[ $volbval > 0 && $b1x -lt $LIMIT ]] ; then
+
+                if [[ $b0x -lt $LIMIT ]] ; then
+                    echo "== No more B0's in series =="
+                    b0x=$LIMIT
+                fi
+
+                echo ${base}/vol_${volnum}.nii.gz $volbval
+                echo ${split}/vol_${volnum}.nii.gz >> ${b1list}
+
+                ((b1x++))
+            fi
+
+            #if [[ $b0x -ge $LIMIT && $b1x -ge $LIMIT ]] ; then break ; fi
+
+            ((count++)) # increase index by one
         done
     fi
 done

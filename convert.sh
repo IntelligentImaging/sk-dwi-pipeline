@@ -9,7 +9,7 @@ cat << EOF
     USAGE: sh ${0##*/} [--mrtrix || --crl || --dcm2niix] [--noOver] [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
     Incorrect input supplied
     
-    Takes DWI series in DICOM/ and converts to 4D (placed in nrrd/) and 3D (placed in volumes/) formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
+    Takes DWI series in DICOM/ and converts to NIFTI or NHDR formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
     
     [Subj Dir] The subject's DWI processing directory
 
@@ -18,8 +18,6 @@ cat << EOF
 
         --crl       Use crlDICOMConverter for DICOM->NHDR and
                     crlDWIConvertNHDRForFSL for bvecs/bvals
-
-        --noOver    Do not overwrite files already in volumes/ 
             
         -d      Supply the raw data directory to convert. This script will set up symbolic links to the data. 
         
@@ -54,9 +52,6 @@ while :; do
             ;;
         --crl)
             let useCRL=1
-            ;;
-        --noOver|no)
-            let noOver=1
             ;;
         -s|--string)
             if [[ -n "$2" ]] ; then
@@ -209,13 +204,13 @@ for dcm in ${allDCM} ; do
 
         # If MRTRIX option is set, we also convert using MRCONVERT
         if [[ $useMRTRIX -eq 1 ]] ; then
-            odir="mrconvert/${SerNum}_${SerDsc}"
+            odir="${MRTRIX}/${SerNum}_${SerDsc}"
             mkdir -pv ${odir}
             bvals="${odir}/bvals"
             bvecs="${odir}/bvecs"
             vol4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
             echo "Creating mrtrix mrconvert to extract standardized bvecs"
-            mrconvert ${dcm} ${vol4D} -export_grad_fsl ${bvecs} ${bvals} -json_export "${odir}/${SerNum}_${SerDsc}.json" -force
+            mrconvert ${dcm} ${vol4D} -export_grad_fsl ${bvecs} ${bvals} -json_export "${odir}/${SerNum}_${SerDsc}.json" # -force
         fi
 
         slicetime_dcm ${odir}/sliceTiming.txt
