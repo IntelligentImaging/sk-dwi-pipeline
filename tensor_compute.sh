@@ -154,12 +154,12 @@ else
 fi
 
 echo "Transform b0 and b1 recons to atlas space"
-crlResampler $b0 $tfm $rmask bspline ${b0b1}/atlas_b0_${id}.nii.gz
-crlResampler $b1 $tfm $rmask bspline ${b0b1}/atlas_b1_${id}.nii.gz
+singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlResampler $b0 $tfm $rmask bspline ${b0b1}/atlas_b0_${id}.nii.gz"
+singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlResampler $b1 $tfm $rmask bspline ${b0b1}/atlas_b1_${id}.nii.gz"
 
 # Check output
 if [[ ! -f ${CASEDIR}/dti/atlas_tensor_${id}_${REG}-CWLLS1.nii.gz ]] ; then
-	echo "Something went wrong- tensor not generated"
+	echo "Something went wrong- tensor not generated: ${id}"
 else
 	echo "Done. Check tensor output in dti/"
 	echo "Refine t2/atlas_mask* overlaid with b0b1/atlas_b0* and b0b1/atlas_b1*"

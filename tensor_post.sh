@@ -53,8 +53,11 @@ TBASE=`basename $TENSOR`
 TTBASE="${TBASE%%.*}"
 MASK=`find ${DIR}/t2 -maxdepth 1 -type f -name atlas_mask\*1pt2_refine.nii.gz` 
 if [[ ! -f $MASK ]] ; then
-    echo "err: mask not found (check CASEDIR/t2)"
-    exit 1
+    MASK=`find ${DIR}/t2 -maxdepth 1 -type f -name atlas_mask\*1pt2.nii.gz`
+    if [[ ! -f $MASK ]] ; then
+        echo "err: mask not found (check CASEDIR/t2)"
+        exit 1
+    fi
 fi
 echo MASK = $MASK
 

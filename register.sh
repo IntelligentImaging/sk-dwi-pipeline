@@ -35,7 +35,7 @@ if ! [[ -f $atlas_t2 && $atlas_mask && $t2_t2 && $t2_mask && $tfm_t2atlas ]] ; t
 fi
 
 # Dilate t2 mask
-crlBinaryMorphology $t2_mask dilate 1 6 $t2_dilmask
+ singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlBinaryMorphology $t2_mask dilate 1 6 $t2_dilmask"
 
 # Function to run Rigid Registration and transform compositions to get dwi->atlas transform
 function register {
@@ -60,11 +60,11 @@ function register {
     tfm_dwit2="${b0b1}/${b}-t2_${ID}_${mcode}.tfm"
     echo "Register DWI to t2: $b $mcode ($mask)"
     cmd="$cmd $t2_t2 ${b0b1}/dwi_${b}_${ID}.nii.gz ${b0b1}/t2_${b}_${ID}_${mcode}.nii.gz $tfm_dwit2 -t 2 -p 2 --metricName $metric"
-    $cmd
+    singularity exec docker://arfentul/crkit:latest /bin/bash -c "$cmd"
     tfm_dwiatlas="${b0b1}/${b}-atlas_${ID}_${mcode}.tfm"
     # Combines dwi->t2 and t2->atlas transforms to get a dwi->atlas transform
     echo "Compose transforms: $b $mcode ($mask)"
-    crlComposeAffineTransforms $tfm_t2atlas $tfm_dwit2 $tfm_dwiatlas
+    singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlComposeAffineTransforms $tfm_t2atlas $tfm_dwit2 $tfm_dwiatlas"
 }
 
 # Registration is very inconsistent so we run it several times with different settings

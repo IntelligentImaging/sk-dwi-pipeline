@@ -65,7 +65,7 @@ if [[ ! -n $LIMIT ]] ; then let LIMIT=999 ; fi # default limit (aka no limit)
 
 data=`readlink -f $1`
 convertername=`basename $data`
-if [[ ! $convertername == mrconvert && ! $convertername == nhdr ]] ; then
+if [[ ! $convertername == mrconvert && ! $convertername == nrrd ]] ; then
     echo "You may have failed to supply the converted directory path. Exiting."
     exit
 fi
@@ -114,7 +114,7 @@ for dwi in ${data}/*/*.nii.gz ; do
         while [[ $count -lt $ndim ]] ; do
             count4=$(printf "%04d" $count)
             printf "\rvolume: ${count4}"
-            mrconvert -quiet ${dwi} -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz -force
+            mrconvert -quiet ${dwi} -coord 3 ${count} -axes 0,1,2 ${split}/vol_${count4}.nii.gz -force # split volumes
             ((count++))
         done
         echo

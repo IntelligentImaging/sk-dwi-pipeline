@@ -109,7 +109,8 @@ function slicetime_json {
     	echo SliceTimings begin on line $lbeg of the json
 
     	# Count number of slices
-    	z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+    	#z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
+        z=`mrinfo ${vol4D} -size | cut -d' ' -f1`
 
     	# Number of times we will need to advance to next line
     	let slices=$z-1
