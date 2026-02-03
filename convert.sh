@@ -6,7 +6,7 @@ STR=''*BRAIN-DTI*' -o -iname '*BRAIN_DTI*' -o -iname '*BRAIN-DTI*' -o -iname '*D
 
 show_help () {
 cat << EOF
-    USAGE: sh ${0##*/} [--mrtrix || --crl || --dcm2niix] [--noOver] [-d DICOM directory] [-s DWI string ] -- [Subject Directory]
+    USAGE: sh ${0##*/} [--noOver] [-d DICOM directory] [-s DWI string ] -- [--mrtrix || --crl || --dcm2niix] [Subject Directory]
     Incorrect input supplied
     
     Takes DWI series in DICOM/ and converts to NIFTI or NHDR formats. Must specify -d to give a path to a DICOM raw data if it's not already linked in Subj/DICOM/
@@ -18,6 +18,8 @@ cat << EOF
 
         --crl       Use crlDICOMConverter for DICOM->NHDR and
                     crlDWIConvertNHDRForFSL for bvecs/bvals
+
+        --dcm2niix  Use dcm2niix (output as nrrd)
             
         -d      Supply the raw data directory to convert. This script will set up symbolic links to the data. 
         
@@ -52,6 +54,9 @@ while :; do
             ;;
         --crl)
             let useCRL=1
+            ;;
+        --dcm2niix)
+            let useD2X=1
             ;;
         -s|--string)
             if [[ -n "$2" ]] ; then
@@ -99,8 +104,8 @@ function slicetime_json {
 
 	json=`find ${odir} -type f -name \*json | head -n1`
     if [[ -f $json ]] ; then
-    	image="${vol4D}"
-
+        image="${vol4D}"
+    	
     	# Find starting location of timing info
     	tim=`grep SliceTiming $json -n | cut -d':' -f1`
 
@@ -110,7 +115,7 @@ function slicetime_json {
 
     	# Count number of slices
     	#z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
-        z=`mrinfo ${vol4D} -size | cut -d' ' -f1`
+        z=`mrinfo ${image} -size | cut -d' ' -f1`
 
     	# Number of times we will need to advance to next line
     	let slices=$z-1
@@ -145,8 +150,10 @@ DICOM="${idpath}/DICOM"
 VOLUMES="${idpath}/volumes"
 NHDR="${idpath}/nrrd"
 MRTRIX="${idpath}/mrconvert"
+DCM2NIIX="${idpath}/dcm2niix"
+DCM2NIIX2="${idpath}/dcm2niix_nifti"
 
-if [[ $useCRL -ne 1 && $useMRTRIX -ne 1 && $useDCM -ne 1 ]] ; then
+if [[ $useCRL -ne 1 && $useMRTRIX -ne 1 && $useD2X -ne 1 ]] ; then
     die 'You need to specify which conversion program to use'
 fi
 
@@ -199,8 +206,6 @@ for dcm in ${allDCM} ; do
 	    convHDR="crlDWIConvertNHDRForFSL -i ${odir}/vol*diffusion*nhdr --data ${vol4D} --bvecs ${bvecs} --bvals ${bvals} --automirrorx 0"
             singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convDCM}"
             singularity exec docker://arfentul/crkit:latest /bin/bash -c "${convHDR}"
-
-	    slicetime_dcm ${odir}/sliceTiming.txt
         fi
 
         # If MRTRIX option is set, we also convert using MRCONVERT
@@ -211,13 +216,33 @@ for dcm in ${allDCM} ; do
             bvecs="${odir}/bvecs"
             vol4D="${odir}/${SerNum}_${SerDsc}.nii.gz"
             echo "Creating mrtrix mrconvert to extract standardized bvecs"
-            mrconvert ${dcm} ${vol4D} -export_grad_fsl ${bvecs} ${bvals} -json_export "${odir}/${SerNum}_${SerDsc}.json" # -force
+            mrconvert ${dcm} ${vol4D} -export_grad_fsl ${bvecs} ${bvals} -json_export "${odir}/${SerNum}_${SerDsc}.json" # -force            
         fi
+
+        # dcm2niix
+        if [[ $useD2X -eq 1 ]] ; then
+            odir="${DCM2NIIX}/${SerNum}_${SerDsc}"
+            mkdir -pv ${odir}
+            bvals="${odir}/bvals"
+            bvecs="${odir}/bvecs"
+            
+            echo Converting with dcm2niix
+            dcm2niix -e y -z y -i y -f ${SerNum}_${SerDsc} -o "${odir}" ${dcm}
+            
+
+            odir2="${DCM2NIIX2}/${SerNum}_${SerDsc}"
+            mkdir -pv ${odir2}
+            dcm2niix -z y -i y -f ${SerNum}_${SerDsc} -o "${odir2}" ${dcm}
+            vol4D="${odir2}/${SerNum}_${SerDsc}.nii.gz"
+
+        fi
+
 
         slicetime_dcm ${odir}/sliceTiming.txt
         if [[ ${time_error}=1 ]] ; then
             slicetime_json
         fi
+
 
     fi
 done
