@@ -21,7 +21,7 @@ This cuts out a number of dependencies and changes some steps, so the original i
 
 ### Processing Steps
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`
-  2. Convert and prep data: `sh dwi-recon-pipeline/convert.sh --dcm2niix [CASE DIR]`
+  2. Convert and prep data: `sh dwi-recon-pipeline/convert.sh [--crl] [CASE DIR]`
   3. Validate data quality and, if necessary, cut down to 2-4 volumes. You can move unwanted series from dcm2niix/ to removed/
   4. Make a binary mask manually or with : `itksnap volumes/XX_BrainDWI/vol_0000.nii.gz` or `sh dwi-recon-pipeline-main/make_volROIs.sh [CASE DIR]`
   5. Create composite B0/B1's (reconstructions): `sh dwi-recon-pipeline/svrtk-dgen.sh -n 5 [CASE/dcm2niix] [mask file]` \
