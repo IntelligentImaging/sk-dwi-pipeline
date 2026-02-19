@@ -21,12 +21,13 @@ This cuts out a number of dependencies and changes some steps, so the original i
 
 ### Processing Steps
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`
-  2. Convert and prep data: `sh dwi-recon-pipeline/convert.sh --dcm2niix [CASE DIR]`
+  2. Convert and prep data: `sh dwi-recon-pipeline/convert.sh --crl [CASE DIR]`
   3. Validate data quality and, if necessary, cut down to 2-4 volumes. You can move unwanted series from dcm2niix/ to removed/
   4. Make a binary mask manually or with : `itksnap volumes/XX_BrainDWI/vol_0000.nii.gz` or `sh dwi-recon-pipeline-main/make_volROIs.sh [CASE DIR]`
-  5. Create composite B0/B1's (reconstructions): `sh dwi-recon-pipeline/svrtk-dgen.sh -n 5 [CASE/dcm2niix] [mask file]` \
+  5. Create composite B0/B1's (run script): `sh dwi-recon-pipeline/svrtk-dgen.sh -n 5 [CASE/nrrd] [mask file]` 
    * `-n 5` limits the number of input images for the reconstructions used for the registration steps only
-  \
+  6. Execute run script: `sh dwi-recon-pipeline/svrtk-dexec.sh [CASE DIR]`
+  
 For the final steps you will require a couple files from the T2 reconstruction.
   6. Regenerate atlas and T2-space images and transforms: `sh dwi-recon-pipeline/t2auto.sh PATH/TO/reconstruction/CASEID/nii/ PATH/TO/diffusion/CASEID/`
   7. Register B0B1 to T2 space: `sh /fileserver/fetal/scripts/DTIfetal/register.sh [b0b1/dwi_b0_SUBJID.nii.gz]`
