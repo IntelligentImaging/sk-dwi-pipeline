@@ -16,8 +16,7 @@ This cuts out a number of dependencies and changes some steps, so the original i
 
 ### Installation
   1. Download this repository
-  2. Add `export FetalDTI=/path/to/repo` to your .bashrc
-  3. Add `export PATH=$PATH:/path/to/fetalmri/software/bin` to your .bashrc
+  2. Add `export PATH=$PATH:/path/to/fetalmri/software/bin` to your .bashrc
 
 ### Processing Steps
   1. Create a template directory: `sh dwi-recon-pipeline/dtiTemplate.sh CASEID`
