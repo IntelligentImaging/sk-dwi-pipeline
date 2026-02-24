@@ -18,6 +18,7 @@ CFA=$3
 dir=`dirname $tensor`
 base=`basename $tensor`
 mten=${dir}/m-${base}
+SHDIR=`dirname $0`
 
 crlMaskImage2 -i $tensor -m $mask -o $CFA
-python $FETALDTI/cfa_from_tensor.py $mten $CFA
+python ${SHDIR}/cfa_from_tensor.py $mten $CFA

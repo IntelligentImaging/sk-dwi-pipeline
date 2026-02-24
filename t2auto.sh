@@ -72,7 +72,8 @@ fi
 
 DIFFt2="${DIFF}/t2"
 # t2Atlas prep script for processing
-T2sh="${FETALDTI}/createAtlasT2andMaskFile.sh"
+SHDIR=`dirname $0`
+T2sh="${SHDIR}/createAtlasT2andMaskFile.sh"
 
 # Use find to locate T2 files (oriented recon, mask, recon atlas space, transform, and T2 stack used for orientation)
 echo "Finding T2 files..."
