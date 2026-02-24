@@ -32,7 +32,8 @@ if [[ -n $2 ]] ; then
 fi
 
 # t2Atlas prep script for processing
-T2sh="${FETALDTI}/createAtlasT2andMaskFile_OldwReorient.sh"
+SHDIR=`dirname $0`
+T2sh="${SHDIR}/createAtlasT2andMaskFile_OldwReorient.sh"
 T2shlocal="${NII}/`basename $T2sh`"
 
 # Use find to locate T2 files (oriented recon, mask, recon atlas space, transform, and T2 stack used for orientation)

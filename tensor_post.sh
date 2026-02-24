@@ -65,12 +65,13 @@ FULLPATH=`readlink -f $TENSOR`
 CASEDIR="${FULLPATH%/dti*}"
 TENSORDIR="${CASEDIR}/dti"
 OUT="${TENSORDIR}/masked"
+SHDIR=`dirname $0`
 mkdir -pv ${OUT}
 SCRIPTS="${CASEDIR}/scripts"
 mkdir -pv $SCRIPTS
 RUN="${SCRIPTS}/run-tensor_post.sh"
 if [[ -f $RUN ]] ; then rm -v $RUN ; fi
-CFApy="${FETALDTI}/cfa_from_tensor.py"
+CFApy="${SHDIR}/cfa_from_tensor.py"
 
 # pick one of the tensor executable outputs
 base=`basename $MASK`
