@@ -128,9 +128,9 @@ if [[ $noten -eq 0 ]] ; then
     # Tensor computation
     # Resample atlas make isotropically with 1.2mm resolution
     echo "Resample mask to isotropic"
-    crlResampleToIsotropic $mask nearest $rmask -x 1.2 -y 1.2 -z 1.2
+    singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlResampleToIsotropic $mask nearest $rmask -x 1.2 -y 1.2 -z 1.2"
     echo "Dilate mask"
-    crlBinaryMorphology $rmask dilate 1 $DIL $dmask
+    singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlBinaryMorphology $rmask dilate 1 $DIL $dmask"
     echo "${id}: Compute tensor"
     dummyb0="${b0_tensor}.gz" # computeTensor does string manipulation for some reason, we need to supply it with a "gz" ending which it stripts off
     computeTensor --baseB0Image $dummyb0 --AtlasBrainMask $dmask --atlasTransformName $tfm --dir $volumes --dtiMethod CWLLS1 --outputTensor $output -w 2 -g 0.63405 
@@ -144,10 +144,10 @@ if [[ $noten -eq 0 ]] ; then
         tenbase=`basename $ten .nrrd`
         tenfinal="${dti}/${tenbase}.nii.gz"
         echo "Convert to float"
-        crlCastSymMatDoubleToFloat $ten $tenfinal
+        singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlCastSymMatDoubleToFloat $ten $tenfinal"
         echo "Tensor clean"
         # We overwrite with tensor clean because this is how Shadab's original pipeline did it
-        crlTensorClean --compressOutput --inputFile $tenfinal --outputFile $tenfinal
+        singularity exec docker://arfentul/crkit:latest /bin/bash -c "crlTensorClean --compressOutput --inputFile $tenfinal --outputFile $tenfinal"
     done
 else
     echo --noten is set, skipping tensor compute
