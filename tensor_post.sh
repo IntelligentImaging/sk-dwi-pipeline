@@ -85,12 +85,28 @@ for LOOK in CWLLS1 WLLS1 LLS ; do
 done
 MTENSOR="${OUT}/m-atlas_tensor_${ID}-${METRIC}.nii.gz"
 
-# Crop
-echo "Crop tensor"
-#cmd="crlMaskImage2 -i $TENSOR -m $MASK -o $MTENSOR"
-cmd="fslmaths $TENSOR -mul $MASK $MTENSOR"
-echo $cmd >> $RUN
-$cmd
+## Crop
+#echo "Crop tensor"
+##cmd="crlMaskImage2 -i $TENSOR -m $MASK -o $MTENSOR"
+#cmd="fslmaths $TENSOR -mul $MASK $MTENSOR"
+#echo $cmd >> $RUN
+#$cmd
+
+
+
+
+echo "masking tensor"
+TCROPTMP=${DIR}/TCROP-${RANDOM}
+mkdir -pv ${TCROPTMP}
+let x=0
+while [[ $x -lt 6 ]] ; do
+    mrconvert -quiet ${TENSOR} -coord 4 ${x} -axes 0,1,2 ${TCROPTMP}/tensorsplit${x}.nii.gz -force
+    mrcalc -quiet ${TCROPTMP}/tensorsplit${x}.nii.gz ${MASK} -multiply ${TCROPTMP}/mtensorsplit${x}.nii.gz -force
+    ((x++))
+done
+
+mrcat -quiet ${TCROPTMP}/mtensorsplit*.nii.gz ${MTENSOR} -force
+rm -rf ${TCROPTMP}
 
 # Diffusion metrics
 AD="${OUT}/atlas_AD_${ID}-${METRIC}.nii.gz"
@@ -109,7 +125,7 @@ if [[ -f $MTENSOR ]] ; then
     cmd="$cmd -r $RD"
     echo $cmd >> $RUN
     echo "Generate scalar parameters"
-    $cmd
+    echo $cmd
     # cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
     cmd="python $CFApy $MTENSOR $CFA"
     echo $cmd >> $RUN
