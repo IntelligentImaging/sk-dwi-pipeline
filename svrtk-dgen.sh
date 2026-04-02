@@ -64,7 +64,7 @@ fi
 if [[ ! -n $LIMIT ]] ; then let LIMIT=999 ; fi # default limit (aka no limit)
 
 data=`readlink -f $1`
-convertername=`basename $data`
+convertername=`basename $data` 
 if [[ ! -d $data || $convertername == volumes || $convertername == DICOM || $convertername == b0b1 || $convertername == dti || $convertername == t2 ]] ; then
     echo "You may have failed to supply the converted directory path. Exiting."
     exit
