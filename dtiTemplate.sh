@@ -14,5 +14,5 @@ if [ $# -ne 1 ]; then
 fi 
 ID=$1
 
-echo "Setting up pipeline dirs: ${ID}"
+echo "Setting up pipeline dirs: ${ID}" 
 mkdir -p ${ID}/DICOM ${ID}/b0b1 ${ID}/dti ${ID}/t2 ${ID}/volumes ${ID}/removed
