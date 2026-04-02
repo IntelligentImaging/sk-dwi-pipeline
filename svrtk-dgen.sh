@@ -65,7 +65,7 @@ if [[ ! -n $LIMIT ]] ; then let LIMIT=999 ; fi # default limit (aka no limit)
 
 data=`readlink -f $1`
 convertername=`basename $data`
-if [[ ! -d $convertername || $convertername == volumes || $convertername == DICOM || $convertername == b0b1 || $convertername == dti || $convertername == t2 ]] ; then
+if [[ ! -d $data || $convertername == volumes || $convertername == DICOM || $convertername == b0b1 || $convertername == dti || $convertername == t2 ]] ; then
     echo "You may have failed to supply the converted directory path. Exiting."
     exit
 fi
@@ -141,7 +141,7 @@ for dwi in ${data}/*/*.nii.gz ; do
             volbval=`echo ${SORTED[$count]} | cut -d',' -f1`
             volnum=`echo ${SORTED[$count]} | cut -d',' -f2`
 
-            echo this is the volbval: $volbval
+            #echo this is the volbval: $volbval
             if [[ ! -n $volbval ]] ; then 
                 echo "no more volumes to sort"
                 break
