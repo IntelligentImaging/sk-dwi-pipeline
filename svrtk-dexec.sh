@@ -122,5 +122,5 @@ fi
 # Copy SVRTK recon outputs to b0b1 folder
 cp ${mpath}/svrtk/b0/image1.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}.nii.gz
 cp ${mpath}/svrtk/b0/image1.nii.gz -vup ${mpath}/b0b1/dwi_b0_${id}_tensor.nii.gz
-cp ${mpath}/svrtk/b1/image1.nii.gz -vup ${mpath}/b0b1/dwi_b1_${id}.nii.gz
+cp ${mpath}/svrtk/b1/image0.nii.gz -vup ${mpath}/b0b1/dwi_b1_${id}.nii.gz
 gzip -d -f ${mpath}/b0b1/dwi_b0_${id}_tensor.nii.gz # computeTensor binary needs this uncompressed
