@@ -119,13 +119,28 @@ for dwi in ${data}/*/*.nii.gz ; do
         done
         echo
 
-        cp ${dwidir}/bvals ${dwidir}/bvecs ${dwidir}/sliceTiming.txt -vup ${split}/
+	bvals=`find ${dwidir} -name \*bval\*`
+	bvecs=`find ${dwidir} -name \*bvec\*`
+	if [[ ! -f  ${dwidir}/sliceTiming.txt ]] ; then
+		echo no slice timing file found, checking for json
+		json=`find ${dwidir} -name \*json`
+		if [[ -f ${json} ]] ; then
+			echo exporting slice timing from json	
+			jq -c '.SliceTiming' ${json} >> ${dwidir}/sliceTiming.txt
+		else echo "no json found"
+		fi
+	else
+		cp ${dwidir}/sliceTiming.txt -v ${split}/
+	fi	
 
+        cp ${dwidir}/sliceTiming.txt -vup ${split}/
+	cp ${bvals} -vup ${split}/bvals
+	cp ${bvecs} -vup ${split}/bvecs
 
         # Make a sorted array with the bvalue-volume pairs
         declare -a BVALS
         let count=0
-        for b in `cat ${dwidir}/bvals` ; do
+        for b in `cat ${split}/bvals` ; do
             count4d=$(printf "%04d" $count)
             BVALS[$count]="$b,$count4d"
             ((count++))
@@ -187,7 +202,7 @@ done
 echo "-mask $svrmask \\" >> $runb0
 echo "-svr_only \\" >> $runb0
 echo "-resolution 0.75 \\" >> $runb0
-echo "-iterations 3" >> $runb0
+echo "-iterations 1" >> $runb0
 
 # Write script for b1 recon
 echo "mirtk reconstruct $b1SVR $nb1 \\" >> $runb1
@@ -198,7 +213,7 @@ done
 echo "-mask $svrmask \\" >> $runb1
 echo "-svr_only \\" >> $runb1
 echo "-resolution 0.75 \\" >> $runb1
-echo "-iterations 2" >> $runb1
+echo "-iterations 1" >> $runb1
 
 echo Wrote run scripts:
 echo $runb0

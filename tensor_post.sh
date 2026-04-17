@@ -125,7 +125,7 @@ if [[ -f $MTENSOR ]] ; then
     cmd="$cmd -r $RD"
     echo $cmd >> $RUN
     echo "Generate scalar parameters"
-    echo $cmd
+    $cmd
     # cmd="TVtool -in ${MTENSOR} -out ${CFA} -rgb"
     cmd="python $CFApy $MTENSOR $CFA"
     echo $cmd >> $RUN
