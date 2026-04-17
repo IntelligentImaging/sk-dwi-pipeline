@@ -100,45 +100,6 @@ function slicetime_dcm {
 	fi
 	}
 
-function slicetime_json {
-
-	json=`find ${odir} -type f -name \*json | head -n1`
-    if [[ -f $json ]] ; then
-        image="${vol4D}"
-    	
-    	# Find starting location of timing info
-    	tim=`grep SliceTiming $json -n | cut -d':' -f1`
-
-    	# Add one to go to the next line
-    	let lbeg=$tim+1
-    	echo SliceTimings begin on line $lbeg of the json
-
-    	# Count number of slices
-    	#z=`crlImageStats ${vol4D} | grep "Size:" | cut -d' ' -f4 | sed 's,\],,'`
-        z=`mrinfo ${image} -size | cut -d' ' -f1`
-
-    	# Number of times we will need to advance to next line
-    	let slices=$z-1
-
-    	# Get last line of Timings
-    	lend=`echo ${lbeg} + ${slices} | bc`
-    	echo Timings go from line $lbeg to $lend
-
-    	# Extract lines
-    	sing=`sed -ne "${lbeg},${lend}p" < $json`
-    	final=`echo $sing | sed -e 's/, /\\\/g' -e 's/ \],//g'`
-    	echo "Slice timings:"
-    	echo $final
-    	echo "(0019,1029) FD ${final} # 288,36 Genereated by Clem script" > $sliceT
-    	# By hook or by crook, we should have the slice timings now
-
-    else
-        echo "No JSON found"
-    fi
-	
-}
-
-
 idpath=`readlink -f $1`
 if [[ ! -d $idpath ]] ; then
     echo "Path does not exist"
@@ -240,9 +201,14 @@ for dcm in ${allDCM} ; do
 
         slicetime_dcm ${odir}/sliceTiming.txt
         if [[ ${time_error}=1 ]] ; then
-            slicetime_json
+		echo dcm tag not found, checking json
+                json=`find ${odir} -name \*json`
+                if [[ -f ${json} ]] ; then
+                        echo exporting slice timing from json
+                        jq -c '.SliceTiming' ${json} >> ${odir}/sliceTiming.txt
+                else echo "no json found"
+                fi
         fi
-
 
     fi
 done
