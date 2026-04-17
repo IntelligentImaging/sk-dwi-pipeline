@@ -15,10 +15,10 @@ if [[ ! -f $B0 ]] ; then
 	echo "Supplied B0 image not found"
 	exit 
 fi
-atlas_t2="${CASEDIR}/t2/atlas_t2_${ID}.nii.gz"
-atlas_mask="${CASEDIR}/t2/atlas_mask_${ID}.nii.gz"
-t2_t2="${CASEDIR}/t2/t2_t2_${ID}.nii.gz"
-t2_mask="${CASEDIR}/t2/t2_mask_${ID}.nii.gz"
+atlas_t2="${CASEDIR}/t2/atlas_t2*_${ID}.nii.gz"
+atlas_mask="${CASEDIR}/t2/atlas_mask*_${ID}.nii.gz"
+t2_t2="${CASEDIR}/t2/t2_t2*_${ID}.nii.gz"
+t2_mask="${CASEDIR}/t2/t2_mask*_${ID}.nii.gz"
 t2_dilmask="${CASEDIR}/t2/t2_mask_${ID}_dilated.nii.gz"
 tfm_t2atlas=`find ${CASEDIR}/t2 -maxdepth 1 -name t2-atlas_${ID}.tfm -o -name t2-atlas_${ID}.txt | sort | head -n1` 
 
