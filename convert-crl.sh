@@ -32,10 +32,10 @@ singularity exec ~/sifs/dicom-tools /bin/bash -c "python3 ${SHDIR}/dicom_tree_to
 
 # copy to nrrd directory for pipeline
 dtis=`find ${odir}/dicomdir-converted -type d -iname \*brain-dti\*`
-mkdir ${casedir}/nrrd
+mkdir ${casedir}/crlnii
 for dti in $dtis ; do
 	dir=`dirname $dti`
 	ser=`basename $dir`
-	cp ${dti} -r nrrd/run_${ser}
+	cp ${dti} -r crlnii/run_${ser}
 done
 
